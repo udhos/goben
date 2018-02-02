@@ -1,0 +1,2 @@
+# goben
+Go benchmark network
