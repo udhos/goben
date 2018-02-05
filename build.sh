@@ -16,6 +16,7 @@ lint() {
 lint main.go
 lint server.go
 lint client.go
+lint goben_test.go
 
 go test github.com/udhos/goben/goben
 go install -v github.com/udhos/goben/goben

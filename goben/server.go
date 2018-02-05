@@ -38,6 +38,11 @@ LOOP:
 		case ']':
 			break LOOP
 		case ':':
+			/*
+				if i == len(host)-1 {
+					return host[:len(host)-1] + port // drop repeated :
+				}
+			*/
 			return host
 		}
 	}
