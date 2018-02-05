@@ -10,8 +10,9 @@ import (
 type hostList []string
 
 type config struct {
-	hosts      hostList
-	listenAddr string
+	hosts       hostList
+	listeners   hostList
+	defaultPort string
 }
 
 func (h *hostList) String() string {
@@ -25,19 +26,26 @@ func (h *hostList) Set(value string) error {
 	}
 	return nil
 }
+
 func main() {
 
 	app := config{}
 
-	flag.Var(&app.hosts, "hosts", "comma-separated list of host[:port]")
-	flag.StringVar(&app.listenAddr, "listen", ":80", "listen address host:port")
+	flag.Var(&app.hosts, "hosts", "comma-separated list of hosts -- host[:port]")
+	flag.Var(&app.listeners, "listeners", "comma-separated list of listen addresses -- host:port")
+	flag.StringVar(&app.defaultPort, "defaultPort", ":8080", "default port")
 
 	flag.Parse()
 
-	log.Printf("listen=%s hosts=%q", app.listenAddr, app.hosts)
+	if len(app.listeners) == 0 {
+		app.listeners = []string{app.defaultPort}
+	}
+
+	log.Printf("listeners=%q hosts=%q", app.listeners, app.hosts)
 
 	if len(app.hosts) == 0 {
 		log.Printf("server mode")
+		serve(&app)
 		return
 	}
 
