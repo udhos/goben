@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -15,6 +17,7 @@ type config struct {
 	hosts       hostList
 	listeners   hostList
 	defaultPort string
+	connections int
 }
 
 func (h *hostList) String() string {
@@ -36,6 +39,7 @@ func main() {
 	flag.Var(&app.hosts, "hosts", "comma-separated list of hosts -- host[:port]")
 	flag.Var(&app.listeners, "listeners", "comma-separated list of listen addresses -- host:port")
 	flag.StringVar(&app.defaultPort, "defaultPort", ":8080", "default port")
+	flag.IntVar(&app.connections, "connections", 1, "number of parallel connections")
 
 	flag.Parse()
 
@@ -43,15 +47,17 @@ func main() {
 		app.listeners = []string{app.defaultPort}
 	}
 
-	log.Printf("goben version " + version)
+	log.Printf("goben version " + version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)))
 
-	log.Printf("defaultPort=%s listeners=%q hosts=%q", app.defaultPort, app.listeners, app.hosts)
+	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
+		app.connections, app.defaultPort, app.listeners, app.hosts)
 
 	if len(app.hosts) == 0 {
-		log.Printf("server mode")
+		log.Printf("server mode (use -hosts to switch to client mode)")
 		serve(&app)
 		return
 	}
 
 	log.Printf("client mode")
+	open(&app)
 }
