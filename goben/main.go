@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const version = "0.0"
+
 type hostList []string
 
 type config struct {
@@ -41,7 +43,9 @@ func main() {
 		app.listeners = []string{app.defaultPort}
 	}
 
-	log.Printf("listeners=%q hosts=%q", app.listeners, app.hosts)
+	log.Printf("goben version " + version)
+
+	log.Printf("defaultPort=%s listeners=%q hosts=%q", app.defaultPort, app.listeners, app.hosts)
 
 	if len(app.hosts) == 0 {
 		log.Printf("server mode")

@@ -12,11 +12,13 @@ func serve(app *config) {
 
 	for _, h := range app.listeners {
 
-		log.Printf("serve: spawning TCP listener: %s", h)
+		hh := appendPortIfMissing(h, app.defaultPort)
 
-		listener, errListen := net.Listen("tcp", h)
+		log.Printf("serve: spawning TCP listener: %s", hh)
+
+		listener, errListen := net.Listen("tcp", hh)
 		if errListen != nil {
-			log.Printf("serve: listen: %v", errListen)
+			log.Printf("serve: listen: %s: %v", hh, errListen)
 			continue
 		}
 
@@ -25,6 +27,22 @@ func serve(app *config) {
 	}
 
 	wg.Wait()
+}
+
+func appendPortIfMissing(host, port string) string {
+
+LOOP:
+	for i := len(host) - 1; i >= 0; i-- {
+		c := host[i]
+		switch c {
+		case ']':
+			break LOOP
+		case ':':
+			return host
+		}
+	}
+
+	return host + port
 }
 
 func handle(wg *sync.WaitGroup, listener net.Listener) {
