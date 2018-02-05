@@ -36,8 +36,8 @@ func main() {
 
 	app := config{}
 
-	flag.Var(&app.hosts, "hosts", "comma-separated list of hosts -- host[:port]")
-	flag.Var(&app.listeners, "listeners", "comma-separated list of listen addresses -- host:port")
+	flag.Var(&app.hosts, "hosts", "comma-separated list of hosts\nyou may append an optional port to every host: host[:port]")
+	flag.Var(&app.listeners, "listeners", "comma-separated list of listen addresses\nyou may prepend an optional host to every port: [host]:port")
 	flag.StringVar(&app.defaultPort, "defaultPort", ":8080", "default port")
 	flag.IntVar(&app.connections, "connections", 1, "number of parallel connections")
 

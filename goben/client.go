@@ -16,11 +16,11 @@ func open(app *config) {
 
 		for i := 0; i < app.connections; i++ {
 
-			log.Printf("client: opening TCP %d/%d: %s", i, app.connections, hh)
+			log.Printf("open: opening TCP %d/%d: %s", i, app.connections, hh)
 
 			conn, errDial := net.Dial("tcp", hh)
 			if errDial != nil {
-				log.Printf("client: dial: %s: %v", hh, errDial)
+				log.Printf("open: dial: %s: %v", hh, errDial)
 				continue
 			}
 
@@ -37,7 +37,7 @@ func handleConnectionClient(wg *sync.WaitGroup, conn *net.TCPConn, c, connection
 	defer wg.Done()
 	defer conn.Close()
 
-	log.Printf("handleConnectionClient: %d/%d %v", c, connections, conn.RemoteAddr())
+	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }

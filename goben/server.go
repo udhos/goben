@@ -67,7 +67,7 @@ func handle(wg *sync.WaitGroup, listener net.Listener) {
 func handleConnection(conn *net.TCPConn) {
 	defer conn.Close()
 
-	log.Printf("handleConnection: %v", conn.RemoteAddr())
+	log.Printf("handleConnection: incoming: %v", conn.RemoteAddr())
 
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
