@@ -77,8 +77,10 @@ func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	countRead := 0
+	var size int64
 
-	dec := gob.NewDecoder(conn)
+	decoder := decoderWrap{reader: conn}
+	dec := gob.NewDecoder(&decoder)
 	var m message
 	for {
 		if err := dec.Decode(&m); err != nil {
@@ -86,19 +88,22 @@ func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}) {
 			break
 		}
 		countRead++
+		size += decoder.size
 	}
 
 	close(done)
 
-	log.Printf("clientReader: exiting: %d/%d %v reads=%d", c, connections, conn.RemoteAddr(), countRead)
+	log.Printf("clientReader: exiting: %d/%d %v reads=%d totalSize=%d", c, connections, conn.RemoteAddr(), countRead, size)
 }
 
 func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	countWrite := 0
+	var size int64
 
-	enc := gob.NewEncoder(conn)
+	encoder := encoderWrap{writer: conn}
+	enc := gob.NewEncoder(&encoder)
 	var m message
 	for {
 		if err := enc.Encode(&m); err != nil {
@@ -106,10 +111,10 @@ func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}) {
 			break
 		}
 		countWrite++
+		size += encoder.size
 	}
 
 	close(done)
 
-	log.Printf("clientWriter: exiting: %d/%d %v writes=%d", c, connections, conn.RemoteAddr(), countWrite)
-
+	log.Printf("clientWriter: exiting: %d/%d %v writes=%d totalSize=%d", c, connections, conn.RemoteAddr(), countWrite, size)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/gob"
+	//"io"
 	"log"
 	"net"
 	"sync"
@@ -68,6 +69,7 @@ func handle(app *config, wg *sync.WaitGroup, listener net.Listener) {
 
 type message struct {
 	Value int
+	Bogus [10000]byte
 }
 
 func handleConnection(app *config, conn *net.TCPConn) {
@@ -99,12 +101,61 @@ LOOP:
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
+type encoderWrap struct {
+	writer net.Conn
+	size   int64
+}
+
+func (e *encoderWrap) Write(p []byte) (n int, err error) {
+	if err := e.writer.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		log.Printf("encoderWrap.Write: %v", err)
+	}
+	n, err = e.writer.Write(p)
+	//log.Printf("write: %d error=%v", n, err)
+	//time.Sleep(100 * time.Millisecond)
+	/*
+		if n < 1 {
+			log.Printf("write(%d): %d error=%v", len(p), n, err)
+		}
+		if n < 0 {
+			n = 0
+		}
+	*/
+	e.size = int64(n)
+	return
+}
+
+type decoderWrap struct {
+	reader net.Conn
+	size   int64
+}
+
+func (d *decoderWrap) Read(p []byte) (n int, err error) {
+	if err := d.reader.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		log.Printf("encoderWrap.Write: %v", err)
+	}
+	n, err = d.reader.Read(p)
+	//log.Printf("read: %d error=%v", n, err)
+	/*
+		if n < 1 || n > 4 {
+			log.Printf("read(%d): %d error=%v", len(p), n, err)
+		}
+		if n < 0 {
+			n = 0
+		}
+	*/
+	d.size = int64(n)
+	return
+}
+
 func serverReader(conn *net.TCPConn) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
 	countRead := 0
+	var size int64
 
-	dec := gob.NewDecoder(conn)
+	decoder := decoderWrap{reader: conn}
+	dec := gob.NewDecoder(&decoder)
 	var m message
 	for {
 		if err := dec.Decode(&m); err != nil {
@@ -112,17 +163,20 @@ func serverReader(conn *net.TCPConn) {
 			break
 		}
 		countRead++
+		size += decoder.size
 	}
 
-	log.Printf("serverReader: exiting: %v reads=%d", conn.RemoteAddr(), countRead)
+	log.Printf("serverReader: exiting: %v reads=%d totalSize=%d", conn.RemoteAddr(), countRead, size)
 }
 
 func serverWriter(conn *net.TCPConn) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
 	countWrite := 0
+	var size int64
 
-	enc := gob.NewEncoder(conn)
+	encoder := encoderWrap{writer: conn}
+	enc := gob.NewEncoder(&encoder)
 	var m message
 	for {
 		if err := enc.Encode(&m); err != nil {
@@ -130,8 +184,8 @@ func serverWriter(conn *net.TCPConn) {
 			break
 		}
 		countWrite++
+		size += encoder.size
 	}
 
-	log.Printf("serverWriter: exiting: %v writes=%d", conn.RemoteAddr(), countWrite)
-
+	log.Printf("serverWriter: exiting: %v writes=%d totalSize=%d", conn.RemoteAddr(), countWrite, size)
 }
