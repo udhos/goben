@@ -67,40 +67,60 @@ func handle(app *config, wg *sync.WaitGroup, listener net.Listener) {
 	}
 }
 
+/*
 type message struct {
 	Value int
 	Bogus [10000]byte
 }
+*/
 
 func handleConnection(app *config, conn *net.TCPConn) {
 	defer conn.Close()
 
 	log.Printf("handleConnection: incoming: %v", conn.RemoteAddr())
 
-	go serverReader(conn)
-	go serverWriter(conn)
+	// receive options
+	var opt options
+	dec := gob.NewDecoder(conn)
+	if errOpt := dec.Decode(&opt); errOpt != nil {
+		log.Printf("handleConnection: options failure: %v", errOpt)
+		return
+	}
+	log.Printf("handleConnection: options: %v", opt)
 
-	tickerReport := time.NewTicker(app.durationReportInterval)
-	tickerPeriod := time.NewTimer(app.durationTotalDuration)
+	go serverReader(conn, opt)
 
-	// timer loop
-LOOP:
-	for {
-		select {
-		case <-tickerReport.C:
-			log.Printf("handleConnection: tick")
-		case <-tickerPeriod.C:
-			log.Printf("handleConnection: timer")
-			break LOOP
-		}
+	if !opt.PassiveServer {
+		go serverWriter(conn, opt)
 	}
 
-	tickerReport.Stop()
+	//tickerReport := time.NewTicker(opt.ReportInterval)
+	tickerPeriod := time.NewTimer(opt.TotalDuration)
+
+	/*
+			// timer loop
+		LOOP:
+				for {
+					select {
+					case <-tickerReport.C:
+						log.Printf("handleConnection: tick")
+					case <-tickerPeriod.C:
+						log.Printf("handleConnection: timer")
+						break LOOP
+					}
+				}
+	*/
+
+	<-tickerPeriod.C
+	log.Printf("handleConnection: %v timer", opt.TotalDuration)
+
+	//tickerReport.Stop()
 	tickerPeriod.Stop()
 
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
+/*
 type encoderWrap struct {
 	writer net.Conn
 	size   int64
@@ -113,14 +133,6 @@ func (e *encoderWrap) Write(p []byte) (n int, err error) {
 	n, err = e.writer.Write(p)
 	//log.Printf("write: %d error=%v", n, err)
 	//time.Sleep(100 * time.Millisecond)
-	/*
-		if n < 1 {
-			log.Printf("write(%d): %d error=%v", len(p), n, err)
-		}
-		if n < 0 {
-			n = 0
-		}
-	*/
 	e.size = int64(n)
 	return
 }
@@ -136,56 +148,55 @@ func (d *decoderWrap) Read(p []byte) (n int, err error) {
 	}
 	n, err = d.reader.Read(p)
 	//log.Printf("read: %d error=%v", n, err)
-	/*
-		if n < 1 || n > 4 {
-			log.Printf("read(%d): %d error=%v", len(p), n, err)
-		}
-		if n < 0 {
-			n = 0
-		}
-	*/
 	d.size = int64(n)
 	return
 }
+*/
 
-func serverReader(conn *net.TCPConn) {
+func serverReader(conn *net.TCPConn, opt options) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
-	countRead := 0
-	var size int64
+	/*
+		countRead := 0
+		var size int64
 
-	decoder := decoderWrap{reader: conn}
-	dec := gob.NewDecoder(&decoder)
-	var m message
-	for {
-		if err := dec.Decode(&m); err != nil {
-			log.Printf("serverReader: Decode: %v", err)
-			break
+		buf := make([]byte, opt.ReadSize)
+		for {
+			n, errRead := conn.Read(buf)
+			if errRead != nil {
+				log.Printf("serverReader: Read: %v", errRead)
+				break
+			}
+			countRead++
+			size += int64(n)
 		}
-		countRead++
-		size += decoder.size
-	}
+	*/
 
-	log.Printf("serverReader: exiting: %v reads=%d totalSize=%d", conn.RemoteAddr(), countRead, size)
+	workLoop("serverReader", conn.Read, opt.ReadSize, opt.ReportInterval)
+
+	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriter(conn *net.TCPConn) {
+func serverWriter(conn *net.TCPConn, opt options) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
-	countWrite := 0
-	var size int64
+	/*
+		countWrite := 0
+		var size int64
 
-	encoder := encoderWrap{writer: conn}
-	enc := gob.NewEncoder(&encoder)
-	var m message
-	for {
-		if err := enc.Encode(&m); err != nil {
-			log.Printf("serverWriter: Encode: %v", err)
-			break
+		buf := make([]byte, opt.WriteSize)
+		for {
+			n, errWrite := conn.Write(buf)
+			if errWrite != nil {
+				log.Printf("serverWriter: Write: %v", errWrite)
+				break
+			}
+			countWrite++
+			size += int64(n)
 		}
-		countWrite++
-		size += encoder.size
-	}
+	*/
 
-	log.Printf("serverWriter: exiting: %v writes=%d totalSize=%d", conn.RemoteAddr(), countWrite, size)
+	workLoop("serverWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
+
+	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }

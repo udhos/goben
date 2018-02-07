@@ -41,80 +41,166 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 
 	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
 
+	// send options
+	opt := app.opt
+	enc := gob.NewEncoder(conn)
+	if errOpt := enc.Encode(&opt); errOpt != nil {
+		log.Printf("handleConnectionClient: options failure: %v", errOpt)
+		return
+	}
+
 	doneReader := make(chan struct{})
 	doneWriter := make(chan struct{})
 
-	go clientReader(conn, c, connections, doneReader)
-	go clientWriter(conn, c, connections, doneWriter)
-
-	tickerReport := time.NewTicker(app.durationReportInterval)
-	tickerPeriod := time.NewTimer(app.durationTotalDuration)
-
-	// timer loop
-LOOP:
-	for {
-		select {
-		case <-tickerReport.C:
-			log.Printf("handleConnectionClient: tick")
-		case <-tickerPeriod.C:
-			log.Printf("handleConnectionClient: timer")
-			break LOOP
-		}
+	go clientReader(conn, c, connections, doneReader, opt)
+	if !app.passiveClient {
+		go clientWriter(conn, c, connections, doneWriter, opt)
 	}
 
-	tickerReport.Stop()
+	//tickerReport := time.NewTicker(app.opt.ReportInterval)
+	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
+
+	/*
+			// timer loop
+		LOOP:
+				for {
+					select {
+					case <-tickerReport.C:
+						log.Printf("handleConnectionClient: tick")
+					case <-tickerPeriod.C:
+						log.Printf("handleConnectionClient: timer")
+						break LOOP
+					}
+				}
+	*/
+
+	<-tickerPeriod.C
+	log.Printf("handleConnectionClient: %v timer", app.opt.TotalDuration)
+
+	//tickerReport.Stop()
 	tickerPeriod.Stop()
 
 	conn.Close() // force reader/writer to quit
 
 	<-doneReader // wait reader exit
-	<-doneWriter // wait writer exit
+	if !app.passiveClient {
+		<-doneWriter // wait writer exit
+	}
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}) {
+func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	countRead := 0
-	var size int64
+	/*
+		countCalls := 0
+		var size int64
 
-	decoder := decoderWrap{reader: conn}
-	dec := gob.NewDecoder(&decoder)
-	var m message
-	for {
-		if err := dec.Decode(&m); err != nil {
-			log.Printf("clientReader: Decode: %v", err)
-			break
+		buf := make([]byte, opt.ReadSize)
+
+		prevTime := time.Now()
+		prevSize := size
+		prevCount := countCalls
+
+		for {
+			n, errRead := conn.Read(buf)
+			if errRead != nil {
+				log.Printf("clientReader: Read: %v", errRead)
+				break
+			}
+			countCalls++
+			size += int64(n)
+
+			now := time.Now()
+			elap := now.Sub(prevTime)
+			if elap > opt.ReportInterval {
+				mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
+				log.Printf("report calls=%d input=%v Mbps", countCalls-prevCount, mbps)
+				prevTime = now
+				prevSize = size
+				prevCount = countCalls
+			}
 		}
-		countRead++
-		size += decoder.size
-	}
+	*/
+
+	workLoop("clientReader", conn.Read, opt.ReadSize, opt.ReportInterval)
 
 	close(done)
 
-	log.Printf("clientReader: exiting: %d/%d %v reads=%d totalSize=%d", c, connections, conn.RemoteAddr(), countRead, size)
+	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}) {
-	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
+type call func(p []byte) (n int, err error)
 
-	countWrite := 0
+func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
+
+	countCalls := 0
 	var size int64
 
-	encoder := encoderWrap{writer: conn}
-	enc := gob.NewEncoder(&encoder)
-	var m message
+	buf := make([]byte, bufSize)
+
+	prevTime := time.Now()
+	prevSize := size
+	prevCount := countCalls
+
 	for {
-		if err := enc.Encode(&m); err != nil {
-			log.Printf("clientWriter: Encode: %v", err)
+		n, errCall := f(buf)
+		if errCall != nil {
+			log.Printf("workLoop: %s: %v", label, errCall)
 			break
 		}
-		countWrite++
-		size += encoder.size
+		countCalls++
+		size += int64(n)
+
+		now := time.Now()
+		elap := now.Sub(prevTime)
+		if elap > reportInterval {
+			mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
+			log.Printf("report %s calls=%d rate=%v Mbps", label, countCalls-prevCount, mbps)
+			prevTime = now
+			prevSize = size
+			prevCount = countCalls
+		}
 	}
+}
+
+func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
+	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
+
+	/*
+		countCalls := 0
+		var size int64
+
+		prevTime := time.Now()
+		prevSize := size
+		prevCount := countCalls
+
+		buf := make([]byte, opt.WriteSize)
+		for {
+			n, errWrite := conn.Write(buf)
+			if errWrite != nil {
+				log.Printf("clientWriter: Write: %v", errWrite)
+				break
+			}
+			countCalls++
+			size += int64(n)
+
+			now := time.Now()
+			elap := now.Sub(prevTime)
+			if elap > opt.ReportInterval {
+				mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
+				log.Printf("report calls=%d output=%v Mbps", countCalls-prevCount, mbps)
+				prevTime = now
+				prevSize = size
+				prevCount = countCalls
+			}
+		}
+	*/
+
+	workLoop("clientWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
 
 	close(done)
 
-	log.Printf("clientWriter: exiting: %d/%d %v writes=%d totalSize=%d", c, connections, conn.RemoteAddr(), countWrite, size)
+	log.Printf("clientWriter: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
