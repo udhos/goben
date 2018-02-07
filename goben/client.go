@@ -37,7 +37,6 @@ func open(app *config) {
 
 func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, c, connections int) {
 	defer wg.Done()
-	//defer conn.Close()
 
 	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
 
@@ -57,27 +56,11 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 		go clientWriter(conn, c, connections, doneWriter, opt)
 	}
 
-	//tickerReport := time.NewTicker(app.opt.ReportInterval)
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
-
-	/*
-			// timer loop
-		LOOP:
-				for {
-					select {
-					case <-tickerReport.C:
-						log.Printf("handleConnectionClient: tick")
-					case <-tickerPeriod.C:
-						log.Printf("handleConnectionClient: timer")
-						break LOOP
-					}
-				}
-	*/
 
 	<-tickerPeriod.C
 	log.Printf("handleConnectionClient: %v timer", app.opt.TotalDuration)
 
-	//tickerReport.Stop()
 	tickerPeriod.Stop()
 
 	conn.Close() // force reader/writer to quit
@@ -92,37 +75,6 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 
 func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
-
-	/*
-		countCalls := 0
-		var size int64
-
-		buf := make([]byte, opt.ReadSize)
-
-		prevTime := time.Now()
-		prevSize := size
-		prevCount := countCalls
-
-		for {
-			n, errRead := conn.Read(buf)
-			if errRead != nil {
-				log.Printf("clientReader: Read: %v", errRead)
-				break
-			}
-			countCalls++
-			size += int64(n)
-
-			now := time.Now()
-			elap := now.Sub(prevTime)
-			if elap > opt.ReportInterval {
-				mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
-				log.Printf("report calls=%d input=%v Mbps", countCalls-prevCount, mbps)
-				prevTime = now
-				prevSize = size
-				prevCount = countCalls
-			}
-		}
-	*/
 
 	workLoop("clientReader", conn.Read, opt.ReadSize, opt.ReportInterval)
 
@@ -156,8 +108,10 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 		now := time.Now()
 		elap := now.Sub(prevTime)
 		if elap > reportInterval {
-			mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
-			log.Printf("report %s calls=%d rate=%v Mbps", label, countCalls-prevCount, mbps)
+			elapSec := elap.Seconds()
+			mbps := int64(float64(8*(size-prevSize)) / (1000000 * elapSec))
+			cps := int64(float64(countCalls-prevCount) / elapSec)
+			log.Printf("report %s rate: %6d Mbps %6d calls/s", label, mbps, cps)
 			prevTime = now
 			prevSize = size
 			prevCount = countCalls
@@ -167,36 +121,6 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 
 func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
-
-	/*
-		countCalls := 0
-		var size int64
-
-		prevTime := time.Now()
-		prevSize := size
-		prevCount := countCalls
-
-		buf := make([]byte, opt.WriteSize)
-		for {
-			n, errWrite := conn.Write(buf)
-			if errWrite != nil {
-				log.Printf("clientWriter: Write: %v", errWrite)
-				break
-			}
-			countCalls++
-			size += int64(n)
-
-			now := time.Now()
-			elap := now.Sub(prevTime)
-			if elap > opt.ReportInterval {
-				mbps := int64(8 * float64(size-prevSize) / (1000000 * elap.Seconds()))
-				log.Printf("report calls=%d output=%v Mbps", countCalls-prevCount, mbps)
-				prevTime = now
-				prevSize = size
-				prevCount = countCalls
-			}
-		}
-	*/
 
 	workLoop("clientWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
 

@@ -67,13 +67,6 @@ func handle(app *config, wg *sync.WaitGroup, listener net.Listener) {
 	}
 }
 
-/*
-type message struct {
-	Value int
-	Bogus [10000]byte
-}
-*/
-
 func handleConnection(app *config, conn *net.TCPConn) {
 	defer conn.Close()
 
@@ -94,83 +87,18 @@ func handleConnection(app *config, conn *net.TCPConn) {
 		go serverWriter(conn, opt)
 	}
 
-	//tickerReport := time.NewTicker(opt.ReportInterval)
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
-
-	/*
-			// timer loop
-		LOOP:
-				for {
-					select {
-					case <-tickerReport.C:
-						log.Printf("handleConnection: tick")
-					case <-tickerPeriod.C:
-						log.Printf("handleConnection: timer")
-						break LOOP
-					}
-				}
-	*/
 
 	<-tickerPeriod.C
 	log.Printf("handleConnection: %v timer", opt.TotalDuration)
 
-	//tickerReport.Stop()
 	tickerPeriod.Stop()
 
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-/*
-type encoderWrap struct {
-	writer net.Conn
-	size   int64
-}
-
-func (e *encoderWrap) Write(p []byte) (n int, err error) {
-	if err := e.writer.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		log.Printf("encoderWrap.Write: %v", err)
-	}
-	n, err = e.writer.Write(p)
-	//log.Printf("write: %d error=%v", n, err)
-	//time.Sleep(100 * time.Millisecond)
-	e.size = int64(n)
-	return
-}
-
-type decoderWrap struct {
-	reader net.Conn
-	size   int64
-}
-
-func (d *decoderWrap) Read(p []byte) (n int, err error) {
-	if err := d.reader.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		log.Printf("encoderWrap.Write: %v", err)
-	}
-	n, err = d.reader.Read(p)
-	//log.Printf("read: %d error=%v", n, err)
-	d.size = int64(n)
-	return
-}
-*/
-
 func serverReader(conn *net.TCPConn, opt options) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
-
-	/*
-		countRead := 0
-		var size int64
-
-		buf := make([]byte, opt.ReadSize)
-		for {
-			n, errRead := conn.Read(buf)
-			if errRead != nil {
-				log.Printf("serverReader: Read: %v", errRead)
-				break
-			}
-			countRead++
-			size += int64(n)
-		}
-	*/
 
 	workLoop("serverReader", conn.Read, opt.ReadSize, opt.ReportInterval)
 
@@ -179,22 +107,6 @@ func serverReader(conn *net.TCPConn, opt options) {
 
 func serverWriter(conn *net.TCPConn, opt options) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
-
-	/*
-		countWrite := 0
-		var size int64
-
-		buf := make([]byte, opt.WriteSize)
-		for {
-			n, errWrite := conn.Write(buf)
-			if errWrite != nil {
-				log.Printf("serverWriter: Write: %v", errWrite)
-				break
-			}
-			countWrite++
-			size += int64(n)
-		}
-	*/
 
 	workLoop("serverWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
 
