@@ -92,7 +92,8 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 
 	buf := make([]byte, bufSize)
 
-	prevTime := time.Now()
+	start := time.Now()
+	prevTime := start
 	prevSize := size
 	prevCount := countCalls
 
@@ -117,6 +118,11 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 			prevCount = countCalls
 		}
 	}
+
+	elapSec := time.Now().Sub(start).Seconds()
+	mbps := int64(float64(8*size) / (1000000 * elapSec))
+	cps := int64(float64(countCalls) / elapSec)
+	log.Printf("average %s rate: %d Mbps %d calls/s", label, mbps, cps)
 }
 
 func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
