@@ -5,7 +5,7 @@ Install
 =======
 
     go get github.com/udhos/goben
-    go install github.com/udhos/goben
+    go install github.com/udhos/goben/goben
 
 Usage
 =====
