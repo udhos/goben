@@ -121,7 +121,7 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 		}
 	}
 
-	elapSec := time.Now().Sub(start).Seconds()
+	elapSec := time.Since(start).Seconds()
 	mbps := int64(float64(8*size) / (1000000 * elapSec))
 	cps := int64(float64(countCalls) / elapSec)
 	log.Printf("average %s rate: %d Mbps %d calls/s", label, mbps, cps)

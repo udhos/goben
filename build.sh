@@ -2,21 +2,13 @@
 
 gobin=~/go/bin
 
-gofmt -s -w goben/*
-go tool fix goben/*
+gofmt -s -w goben/*.go
+go tool fix goben/*.go
 go tool vet goben
 
-lint() {
-    local f=$1
-    [ -x $gobin/gosimple ]    && $gobin/gosimple    $f
-    [ -x $gobin/golint ]      && $gobin/golint      $f
-    [ -x $gobin/staticcheck ] && $gobin/staticcheck $f
-}
-
-lint main.go
-lint server.go
-lint client.go
-lint goben_test.go
+[ -x $gobin/gosimple ] && $gobin/gosimple goben/*.go
+[ -x $gobin/golint ] && $gobin/golint goben/*.go
+[ -x $gobin/staticcheck ] && $gobin/staticcheck goben/*.go
 
 go test github.com/udhos/goben/goben
 go install -v github.com/udhos/goben/goben
