@@ -1,5 +1,5 @@
 # goben
-Go benchmark network
+goben is a golang tool to measure TCP throughput between hotsts.
 
 Install
 =======
