@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"log"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -98,6 +99,7 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 	prevCount := countCalls
 
 	for {
+		runtime.Gosched()
 		n, errCall := f(buf)
 		if errCall != nil {
 			log.Printf("workLoop: %s: %v", label, errCall)
