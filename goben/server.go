@@ -90,9 +90,9 @@ func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
 }
 
 type udpInfo struct {
-	remote   *net.UDPAddr
-	opt      options
-	sizeRead int64
+	remote *net.UDPAddr
+	opt    options
+	acc    *account
 }
 
 type udpTable map[string]*udpInfo
@@ -117,7 +117,9 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 		if !found {
 			info = &udpInfo{
 				remote: src,
+				acc:    &account{},
 			}
+			info.acc.prevTime = time.Now()
 			tab[src.String()] = info
 
 			dec := gob.NewDecoder(bytes.NewBuffer(buf[:n]))
@@ -141,8 +143,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 		}
 
 		// account read from UDP socket
-
-		info.sizeRead += int64(n)
+		info.acc.update(n, info.opt.ReportInterval, "handleUDP", "rcv/s")
 	}
 }
 

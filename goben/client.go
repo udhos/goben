@@ -119,25 +119,46 @@ func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt opt
 
 type call func(p []byte) (n int, err error)
 
-func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
+type account struct {
+	prevTime  time.Time
+	prevSize  int64
+	prevCalls int
+	size      int64
+	calls     int
+}
 
-	countCalls := 0
-	var size int64
+func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string) {
+	a.calls++
+	a.size += int64(n)
+
+	now := time.Now()
+	elap := now.Sub(a.prevTime)
+	if elap > reportInterval {
+		elapSec := elap.Seconds()
+		mbps := int64(float64(8*(a.size-a.prevSize)) / (1000000 * elapSec))
+		cps := int64(float64(a.calls-a.prevCalls) / elapSec)
+		log.Printf("report %14s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
+		a.prevTime = now
+		a.prevSize = a.size
+		a.prevCalls = a.calls
+	}
+}
+
+func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
 
 	buf := make([]byte, bufSize)
 
 	start := time.Now()
-	prevTime := start
-	prevSize := size
-	prevCount := countCalls
+	acc := &account{}
+	acc.prevTime = start
 
 	for {
 		runtime.Gosched()
 
 		if maxSpeed > 0 {
-			elapSec := time.Since(prevTime).Seconds()
+			elapSec := time.Since(acc.prevTime).Seconds()
 			if elapSec > 0 {
-				mbps := float64(8*(size-prevSize)) / (1000000 * elapSec)
+				mbps := float64(8*(acc.size-acc.prevSize)) / (1000000 * elapSec)
 				if mbps > maxSpeed {
 					time.Sleep(time.Millisecond)
 					continue
@@ -150,24 +171,28 @@ func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.D
 			log.Printf("workLoop: %s: %v", label, errCall)
 			break
 		}
-		countCalls++
-		size += int64(n)
 
-		now := time.Now()
-		elap := now.Sub(prevTime)
-		if elap > reportInterval {
-			elapSec := elap.Seconds()
-			mbps := int64(float64(8*(size-prevSize)) / (1000000 * elapSec))
-			cps := int64(float64(countCalls-prevCount) / elapSec)
-			log.Printf("report %s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
-			prevTime = now
-			prevSize = size
-			prevCount = countCalls
-		}
+		/*
+			countCalls++
+			size += int64(n)
+
+			now := time.Now()
+			elap := now.Sub(prevTime)
+			if elap > reportInterval {
+				elapSec := elap.Seconds()
+				mbps := int64(float64(8*(size-prevSize)) / (1000000 * elapSec))
+				cps := int64(float64(countCalls-prevCount) / elapSec)
+				log.Printf("report %s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
+				prevTime = now
+				prevSize = size
+				prevCount = countCalls
+			}
+		*/
+		acc.update(n, reportInterval, label, cpsLabel)
 	}
 
 	elapSec := time.Since(start).Seconds()
-	mbps := int64(float64(8*size) / (1000000 * elapSec))
-	cps := int64(float64(countCalls) / elapSec)
+	mbps := int64(float64(8*acc.size) / (1000000 * elapSec))
+	cps := int64(float64(acc.calls) / elapSec)
 	log.Printf("average %s rate: %d Mbps %d %s", label, mbps, cps, cpsLabel)
 }
