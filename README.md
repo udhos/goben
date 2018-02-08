@@ -2,7 +2,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/udhos/goben)](https://goreportcard.com/report/github.com/udhos/goben)
 
 # goben
-goben is a golang tool to measure TCP throughput between hotsts.
+goben is a golang tool to measure TCP/UDP transport layer throughput between hotsts.
 
 Install
 =======
