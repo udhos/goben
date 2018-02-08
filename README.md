@@ -4,6 +4,20 @@
 # goben
 goben is a golang tool to measure TCP/UDP transport layer throughput between hotsts.
 
+Features
+========
+
+- Support for TCP and UDP.
+- Can limit maximum bandwidth.
+- Written in [Go](https://golang.org/). Single executable file. No runtime dependency.
+- Simple usage: start the server then launch the client pointing to server's address.
+- Spawns multiple concurrent lightweight goroutines to handle multiple parallel traffic streams.
+
+Requirements
+============
+
+- You need a [system with the Go language](https://golang.org/dl/) in order to build the application. There is no special requirement for running it.
+
 Install
 =======
 
