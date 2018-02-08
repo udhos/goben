@@ -100,7 +100,7 @@ func handleConnection(app *config, conn *net.TCPConn) {
 func serverReader(conn *net.TCPConn, opt options) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverReader", conn.Read, opt.ReadSize, opt.ReportInterval)
+	workLoop("serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
@@ -108,7 +108,7 @@ func serverReader(conn *net.TCPConn, opt options) {
 func serverWriter(conn *net.TCPConn, opt options) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
+	workLoop("serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }

@@ -77,16 +77,26 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientReader", conn.Read, opt.ReadSize, opt.ReportInterval)
+	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval)
 
 	close(done)
 
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
+func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
+	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
+
+	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval)
+
+	close(done)
+
+	log.Printf("clientWriter: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
+}
+
 type call func(p []byte) (n int, err error)
 
-func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
+func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration) {
 
 	countCalls := 0
 	var size int64
@@ -114,7 +124,7 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 			elapSec := elap.Seconds()
 			mbps := int64(float64(8*(size-prevSize)) / (1000000 * elapSec))
 			cps := int64(float64(countCalls-prevCount) / elapSec)
-			log.Printf("report %s rate: %6d Mbps %6d calls/s", label, mbps, cps)
+			log.Printf("report %s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
 			prevTime = now
 			prevSize = size
 			prevCount = countCalls
@@ -124,15 +134,5 @@ func workLoop(label string, f call, bufSize int, reportInterval time.Duration) {
 	elapSec := time.Since(start).Seconds()
 	mbps := int64(float64(8*size) / (1000000 * elapSec))
 	cps := int64(float64(countCalls) / elapSec)
-	log.Printf("average %s rate: %d Mbps %d calls/s", label, mbps, cps)
-}
-
-func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
-	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
-
-	workLoop("clientWriter", conn.Write, opt.WriteSize, opt.ReportInterval)
-
-	close(done)
-
-	log.Printf("clientWriter: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
+	log.Printf("average %s rate: %d Mbps %d %s", label, mbps, cps, cpsLabel)
 }
