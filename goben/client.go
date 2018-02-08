@@ -127,6 +127,8 @@ type account struct {
 	calls     int
 }
 
+const fmtReport = "%7s %14s rate: %6d Mbps %6d %s"
+
 func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string) {
 	a.calls++
 	a.size += int64(n)
@@ -137,7 +139,7 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 		elapSec := elap.Seconds()
 		mbps := int64(float64(8*(a.size-a.prevSize)) / (1000000 * elapSec))
 		cps := int64(float64(a.calls-a.prevCalls) / elapSec)
-		log.Printf("report %14s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
+		log.Printf(fmtReport, "report", label, mbps, cps, cpsLabel)
 		a.prevTime = now
 		a.prevSize = a.size
 		a.prevCalls = a.calls
@@ -148,7 +150,7 @@ func (a *account) average(start time.Time, label, cpsLabel string) {
 	elapSec := time.Since(start).Seconds()
 	mbps := int64(float64(8*a.size) / (1000000 * elapSec))
 	cps := int64(float64(a.calls) / elapSec)
-	log.Printf("average %s rate: %d Mbps %d %s", label, mbps, cps, cpsLabel)
+	log.Printf(fmtReport, "average", label, mbps, cps, cpsLabel)
 }
 
 func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
