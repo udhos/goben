@@ -30,7 +30,7 @@ type options struct {
 	TotalDuration  time.Duration
 	ReadSize       int
 	WriteSize      int
-	PassiveServer  bool // supress server send
+	PassiveServer  bool // suppress server send
 }
 
 func (h *hostList) String() string {
@@ -57,8 +57,8 @@ func main() {
 	flag.StringVar(&app.totalDuration, "totalDuration", "10s", "test total duration")
 	flag.IntVar(&app.opt.ReadSize, "readSize", 20000, "read buffer size in bytes")
 	flag.IntVar(&app.opt.WriteSize, "writeSize", 20000, "write buffer size in bytes")
-	flag.BoolVar(&app.passiveClient, "passiveClient", false, "supress client writes")
-	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "supress server writes")
+	flag.BoolVar(&app.passiveClient, "passiveClient", false, "suppress client writes")
+	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
 
 	flag.Parse()
 
