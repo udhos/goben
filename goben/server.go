@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	//"io"
-	"bytes"
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -106,6 +107,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	for {
 		var info *udpInfo
 		n, src, errRead := conn.ReadFromUDP(buf)
+		//log.Printf("ReadFromUDP: size=%d from %s: error: %v", n, src, errRead)
 		if src == nil {
 			log.Printf("handleUDP: read nil src: error: %v", errRead)
 			continue
@@ -124,6 +126,12 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 				continue
 			}
 			log.Printf("handleUDP: options received: %v", info.opt)
+
+			if !info.opt.PassiveServer {
+				opt := info.opt // copy for gorouting
+				go serverWriterTo(conn, opt, src)
+			}
+
 			continue
 		}
 
@@ -131,6 +139,8 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 			log.Printf("handleUDP: read error: %s: %v", src, errRead)
 			continue
 		}
+
+		// account read from UDP socket
 
 		info.sizeRead += int64(n)
 	}
@@ -166,7 +176,7 @@ func handleConnection(app *config, conn *net.TCPConn) {
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-func serverReader(conn *net.TCPConn, opt options) {
+func serverReader(conn net.Conn, opt options) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
 	workLoop("serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0)
@@ -174,10 +184,28 @@ func serverReader(conn *net.TCPConn, opt options) {
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriter(conn *net.TCPConn, opt options) {
+func serverWriter(conn net.Conn, opt options) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
 	workLoop("serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
+}
+
+func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr) {
+	log.Printf("serverWriterTo: starting: %v", dst)
+
+	begin := time.Now()
+
+	udpWriteTo := func(b []byte) (int, error) {
+		if time.Since(begin) > opt.TotalDuration {
+			return -1, fmt.Errorf("udpWriteTo: total duration %s timer", opt.TotalDuration)
+		}
+
+		return conn.WriteTo(b, dst)
+	}
+
+	workLoop("serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
+
+	log.Printf("serverWriterTo: exiting: %v", dst)
 }

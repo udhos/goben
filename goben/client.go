@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"log"
 	"net"
@@ -11,6 +12,13 @@ import (
 
 func open(app *config) {
 
+	var proto string
+	if app.udp {
+		proto = "udp"
+	} else {
+		proto = "tcp"
+	}
+
 	var wg sync.WaitGroup
 
 	for _, h := range app.hosts {
@@ -18,13 +26,6 @@ func open(app *config) {
 		hh := appendPortIfMissing(h, app.defaultPort)
 
 		for i := 0; i < app.connections; i++ {
-
-			var proto string
-			if app.udp {
-				proto = "udp"
-			} else {
-				proto = "tcp"
-			}
 
 			log.Printf("open: opening %s %d/%d: %s", proto, i, app.connections, hh)
 
@@ -50,10 +51,24 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 
 	// send options
 	opt := app.opt
-	enc := gob.NewEncoder(conn)
-	if errOpt := enc.Encode(&opt); errOpt != nil {
-		log.Printf("handleConnectionClient: options failure: %v", errOpt)
-		return
+	if app.udp {
+		var optBuf bytes.Buffer
+		enc := gob.NewEncoder(&optBuf)
+		if errOpt := enc.Encode(&opt); errOpt != nil {
+			log.Printf("handleConnectionClient: UDP options failure: %v", errOpt)
+			return
+		}
+		_, optWriteErr := conn.Write(optBuf.Bytes())
+		if optWriteErr != nil {
+			log.Printf("handleConnectionClient: UDP options write: %v", optWriteErr)
+			return
+		}
+	} else {
+		enc := gob.NewEncoder(conn)
+		if errOpt := enc.Encode(&opt); errOpt != nil {
+			log.Printf("handleConnectionClient: TCP options failure: %v", errOpt)
+			return
+		}
 	}
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 
