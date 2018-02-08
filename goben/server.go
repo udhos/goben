@@ -115,6 +115,8 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 		var found bool
 		info, found = tab[src.String()]
 		if !found {
+			log.Printf("handleUDP: incoming: %v", src)
+
 			info = &udpInfo{
 				remote: src,
 				acc:    &account{},
