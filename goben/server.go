@@ -93,6 +93,7 @@ type udpInfo struct {
 	remote *net.UDPAddr
 	opt    options
 	acc    *account
+	start  time.Time
 }
 
 type udpTable map[string]*udpInfo
@@ -120,8 +121,9 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 			info = &udpInfo{
 				remote: src,
 				acc:    &account{},
+				start:  time.Now(),
 			}
-			info.acc.prevTime = time.Now()
+			info.acc.prevTime = info.start
 			tab[src.String()] = info
 
 			dec := gob.NewDecoder(bytes.NewBuffer(buf[:n]))
@@ -133,7 +135,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 			if !info.opt.PassiveServer {
 				opt := info.opt // copy for gorouting
-				go serverWriterTo(conn, opt, src)
+				go serverWriterTo(conn, opt, src, info.acc)
 			}
 
 			continue
@@ -141,6 +143,13 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 		if errRead != nil {
 			log.Printf("handleUDP: read error: %s: %v", src, errRead)
+			continue
+		}
+
+		if time.Since(info.start) > info.opt.TotalDuration {
+			log.Printf("handleUDP: total duration %s timer: %s", info.opt.TotalDuration, src)
+			info.acc.average(info.start, "handleUDP", "rcv/s")
+			log.Printf("handleUDP: FIXME: remove idle udp entry from udp table")
 			continue
 		}
 
@@ -195,13 +204,13 @@ func serverWriter(conn net.Conn, opt options) {
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr) {
+func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *account) {
 	log.Printf("serverWriterTo: starting: %v", dst)
 
-	begin := time.Now()
+	start := acc.prevTime
 
 	udpWriteTo := func(b []byte) (int, error) {
-		if time.Since(begin) > opt.TotalDuration {
+		if time.Since(start) > opt.TotalDuration {
 			return -1, fmt.Errorf("udpWriteTo: total duration %s timer", opt.TotalDuration)
 		}
 

@@ -144,6 +144,13 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 	}
 }
 
+func (a *account) average(start time.Time, label, cpsLabel string) {
+	elapSec := time.Since(start).Seconds()
+	mbps := int64(float64(8*a.size) / (1000000 * elapSec))
+	cps := int64(float64(a.calls) / elapSec)
+	log.Printf("average %s rate: %d Mbps %d %s", label, mbps, cps, cpsLabel)
+}
+
 func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
 
 	buf := make([]byte, bufSize)
@@ -172,27 +179,8 @@ func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.D
 			break
 		}
 
-		/*
-			countCalls++
-			size += int64(n)
-
-			now := time.Now()
-			elap := now.Sub(prevTime)
-			if elap > reportInterval {
-				elapSec := elap.Seconds()
-				mbps := int64(float64(8*(size-prevSize)) / (1000000 * elapSec))
-				cps := int64(float64(countCalls-prevCount) / elapSec)
-				log.Printf("report %s rate: %6d Mbps %6d %s", label, mbps, cps, cpsLabel)
-				prevTime = now
-				prevSize = size
-				prevCount = countCalls
-			}
-		*/
 		acc.update(n, reportInterval, label, cpsLabel)
 	}
 
-	elapSec := time.Since(start).Seconds()
-	mbps := int64(float64(8*acc.size) / (1000000 * elapSec))
-	cps := int64(float64(acc.calls) / elapSec)
-	log.Printf("average %s rate: %d Mbps %d %s", label, mbps, cps, cpsLabel)
+	acc.average(start, label, cpsLabel)
 }
