@@ -40,7 +40,6 @@ func (h *hostList) String() string {
 
 func (h *hostList) Set(value string) error {
 	for _, hh := range strings.Split(value, ",") {
-		log.Printf("cmd-line host: %s", hh)
 		*h = append(*h, hh)
 	}
 	return nil
