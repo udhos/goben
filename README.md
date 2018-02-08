@@ -29,38 +29,39 @@ Example
 Server side:
 
     $ goben
-    2018/02/07 21:39:10 goben version 0.0 runtime go1.10rc2 GOMAXPROCS=1
-    2018/02/07 21:39:10 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
-    2018/02/07 21:39:10 reportInterval=2s totalDuration=10s
-    2018/02/07 21:39:10 server mode (use -hosts to switch to client mode)
-    2018/02/07 21:39:10 serve: spawning TCP listener: :8080
+    2018/02/08 18:37:28 goben version 0.1 runtime go1.10rc2 GOMAXPROCS=1
+    2018/02/08 18:37:28 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
+    2018/02/08 18:37:28 reportInterval=2s totalDuration=10s
+    2018/02/08 18:37:28 server mode (use -hosts to switch to client mode)
+    2018/02/08 18:37:28 serve: spawning TCP listener: :8080
+    2018/02/08 18:37:28 serve: spawning UDP listener: :8080
 
 Client side:
 
     $ goben -hosts localhost
-    2018/02/07 21:40:19 cmd-line host: localhost
-    2018/02/07 21:40:19 goben version 0.0 runtime go1.10rc2 GOMAXPROCS=1
-    2018/02/07 21:40:19 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
-    2018/02/07 21:40:19 reportInterval=2s totalDuration=10s
-    2018/02/07 21:40:19 client mode
-    2018/02/07 21:40:19 open: opening TCP 0/1: localhost:8080
-    2018/02/07 21:40:19 handleConnectionClient: starting 0/1 [::1]:8080
-    2018/02/07 21:40:19 clientReader: starting: 0/1 [::1]:8080
-    2018/02/07 21:40:19 clientWriter: starting: 0/1 [::1]:8080
-    2018/02/07 21:40:21 report clientWriter rate:   7982 Mbps  49892 calls/s
-    2018/02/07 21:40:21 report clientReader rate:   8238 Mbps  51496 calls/s
-    2018/02/07 21:40:23 report clientWriter rate:   7849 Mbps  49058 calls/s
-    2018/02/07 21:40:23 report clientReader rate:   8092 Mbps  50582 calls/s
-    2018/02/07 21:40:25 report clientWriter rate:   7767 Mbps  48549 calls/s
-    2018/02/07 21:40:25 report clientReader rate:   8291 Mbps  51829 calls/s
-    2018/02/07 21:40:27 report clientWriter rate:   7549 Mbps  47183 calls/s
-    2018/02/07 21:40:27 report clientReader rate:   8129 Mbps  50815 calls/s
-    2018/02/07 21:40:29 workLoop: clientWriter: write tcp [::1]:54942->[::1]:8080: write: connection reset by peer
-    2018/02/07 21:40:29 average clientWriter rate: 7739 Mbps 48370 calls/s
-    2018/02/07 21:40:29 clientWriter: exiting: 0/1 [::1]:8080
-    2018/02/07 21:40:29 handleConnectionClient: 10s timer
-    2018/02/07 21:40:29 workLoop: clientReader: read tcp [::1]:54942->[::1]:8080: use of closed network connection
-    2018/02/07 21:40:29 average clientReader rate: 8173 Mbps 51089 calls/s
-    2018/02/07 21:40:29 clientReader: exiting: 0/1 [::1]:8080
-    2018/02/07 21:40:29 handleConnectionClient: closing: 0/1 [::1]:8080
-
+    2018/02/08 18:38:48 goben version 0.1 runtime go1.10rc2 GOMAXPROCS=1
+    2018/02/08 18:38:48 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
+    2018/02/08 18:38:48 reportInterval=2s totalDuration=10s
+    2018/02/08 18:38:48 client mode, tcp protocol
+    2018/02/08 18:38:48 open: opening tcp 0/1: localhost:8080
+    2018/02/08 18:38:48 handleConnectionClient: starting 0/1 [::1]:8080
+    2018/02/08 18:38:48 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}
+    2018/02/08 18:38:48 clientReader: starting: 0/1 [::1]:8080
+    2018/02/08 18:38:48 clientWriter: starting: 0/1 [::1]:8080
+    2018/02/08 18:38:50 report   clientReader rate:  11565 Mbps  28913 rcv/s
+    2018/02/08 18:38:50 report   clientWriter rate:  11189 Mbps  27973 snd/s
+    2018/02/08 18:38:52 report   clientReader rate:  11340 Mbps  28352 rcv/s
+    2018/02/08 18:38:52 report   clientWriter rate:  10975 Mbps  27438 snd/s
+    2018/02/08 18:38:54 report   clientReader rate:  11647 Mbps  29117 rcv/s
+    2018/02/08 18:38:54 report   clientWriter rate:  11272 Mbps  28180 snd/s
+    2018/02/08 18:38:56 report   clientReader rate:  10957 Mbps  27394 rcv/s
+    2018/02/08 18:38:56 report   clientWriter rate:  10603 Mbps  26508 snd/s
+    2018/02/08 18:38:58 workLoop: clientWriter: write tcp [::1]:55186->[::1]:8080: write: connection reset by peer
+    2018/02/08 18:38:58 average clientWriter rate: 10995 Mbps 27489 snd/s
+    2018/02/08 18:38:58 clientWriter: exiting: 0/1 [::1]:8080
+    2018/02/08 18:38:58 report   clientReader rate:  11297 Mbps  28244 rcv/s
+    2018/02/08 18:38:58 handleConnectionClient: 10s timer
+    2018/02/08 18:38:58 workLoop: clientReader: read tcp [::1]:55186->[::1]:8080: use of closed network connection
+    2018/02/08 18:38:58 average clientReader rate: 11361 Mbps 28402 rcv/s
+    2018/02/08 18:38:58 clientReader: exiting: 0/1 [::1]:8080
+    2018/02/08 18:38:58 handleConnectionClient: closing: 0/1 [::1]:8080
