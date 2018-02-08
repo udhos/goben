@@ -77,7 +77,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval)
+	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0)
 
 	close(done)
 
@@ -87,7 +87,7 @@ func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt
 func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval)
+	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
 
 	close(done)
 
@@ -96,7 +96,7 @@ func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt
 
 type call func(p []byte) (n int, err error)
 
-func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration) {
+func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
 
 	countCalls := 0
 	var size int64
@@ -110,6 +110,18 @@ func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.D
 
 	for {
 		runtime.Gosched()
+
+		if maxSpeed > 0 {
+			elapSec := time.Since(prevTime).Seconds()
+			if elapSec > 0 {
+				mbps := float64(8*(size-prevSize)) / (1000000 * elapSec)
+				if mbps > maxSpeed {
+					time.Sleep(time.Millisecond)
+					continue
+				}
+			}
+		}
+
 		n, errCall := f(buf)
 		if errCall != nil {
 			log.Printf("workLoop: %s: %v", label, errCall)

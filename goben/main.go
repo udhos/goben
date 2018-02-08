@@ -31,7 +31,8 @@ type options struct {
 	TotalDuration  time.Duration
 	ReadSize       int
 	WriteSize      int
-	PassiveServer  bool // suppress server send
+	PassiveServer  bool    // suppress server send
+	MaxSpeed       float64 // mbps
 }
 
 func (h *hostList) String() string {
@@ -55,10 +56,11 @@ func main() {
 	flag.IntVar(&app.connections, "connections", 1, "number of parallel connections")
 	flag.StringVar(&app.reportInterval, "reportInterval", "2s", "periodic report interval\nunspecified time unit defaults to second")
 	flag.StringVar(&app.totalDuration, "totalDuration", "10s", "test total duration\nunspecified time unit defaults to second")
-	flag.IntVar(&app.opt.ReadSize, "readSize", 20000, "read buffer size in bytes")
-	flag.IntVar(&app.opt.WriteSize, "writeSize", 20000, "write buffer size in bytes")
+	flag.IntVar(&app.opt.ReadSize, "readSize", 50000, "read buffer size in bytes")
+	flag.IntVar(&app.opt.WriteSize, "writeSize", 50000, "write buffer size in bytes")
 	flag.BoolVar(&app.passiveClient, "passiveClient", false, "suppress client writes")
 	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
+	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
 
 	flag.Parse()
 
