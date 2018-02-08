@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/gob"
 	//"io"
+	"bytes"
 	"log"
 	"net"
 	"sync"
@@ -14,22 +15,42 @@ func serve(app *config) {
 	var wg sync.WaitGroup
 
 	for _, h := range app.listeners {
-
 		hh := appendPortIfMissing(h, app.defaultPort)
-
-		log.Printf("serve: spawning TCP listener: %s", hh)
-
-		listener, errListen := net.Listen("tcp", hh)
-		if errListen != nil {
-			log.Printf("serve: listen: %s: %v", hh, errListen)
-			continue
-		}
-
-		wg.Add(1)
-		go handle(app, &wg, listener)
+		listenTCP(app, &wg, hh)
+		listenUDP(app, &wg, hh)
 	}
 
 	wg.Wait()
+}
+
+func listenTCP(app *config, wg *sync.WaitGroup, h string) {
+	log.Printf("serve: spawning TCP listener: %s", h)
+	listener, errListen := net.Listen("tcp", h)
+	if errListen != nil {
+		log.Printf("listenTCP: %s: %v", h, errListen)
+		return
+	}
+	wg.Add(1)
+	go handleTCP(app, wg, listener)
+}
+
+func listenUDP(app *config, wg *sync.WaitGroup, h string) {
+	log.Printf("serve: spawning UDP listener: %s", h)
+
+	udpAddr, errAddr := net.ResolveUDPAddr("udp", h)
+	if errAddr != nil {
+		log.Printf("listenUDP: bad address: %s: %v", h, errAddr)
+		return
+	}
+
+	conn, errListen := net.ListenUDP("udp", udpAddr)
+	if errListen != nil {
+		log.Printf("net.ListenUDP: %s: %v", h, errListen)
+		return
+	}
+
+	wg.Add(1)
+	go handleUDP(app, wg, conn)
 }
 
 func appendPortIfMissing(host, port string) string {
@@ -53,7 +74,7 @@ LOOP:
 	return host + port
 }
 
-func handle(app *config, wg *sync.WaitGroup, listener net.Listener) {
+func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
 	defer wg.Done()
 
 	for {
@@ -64,6 +85,54 @@ func handle(app *config, wg *sync.WaitGroup, listener net.Listener) {
 		}
 		c := conn.(*net.TCPConn)
 		go handleConnection(app, c)
+	}
+}
+
+type udpInfo struct {
+	remote   *net.UDPAddr
+	opt      options
+	sizeRead int64
+}
+
+type udpTable map[string]*udpInfo
+
+func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
+	defer wg.Done()
+
+	tab := map[string]*udpInfo{}
+
+	buf := make([]byte, app.opt.ReadSize)
+
+	for {
+		var info *udpInfo
+		n, src, errRead := conn.ReadFromUDP(buf)
+		if src == nil {
+			log.Printf("handleUDP: read nil src: error: %v", errRead)
+			continue
+		}
+		var found bool
+		info, found = tab[src.String()]
+		if !found {
+			info = &udpInfo{
+				remote: src,
+			}
+			tab[src.String()] = info
+
+			dec := gob.NewDecoder(bytes.NewBuffer(buf[:n]))
+			if errOpt := dec.Decode(&info.opt); errOpt != nil {
+				log.Printf("handleUDP: options failure: %v", errOpt)
+				continue
+			}
+			log.Printf("handleUDP: options received: %v", info.opt)
+			continue
+		}
+
+		if errRead != nil {
+			log.Printf("handleUDP: read error: %s: %v", src, errRead)
+			continue
+		}
+
+		info.sizeRead += int64(n)
 	}
 }
 
@@ -79,7 +148,7 @@ func handleConnection(app *config, conn *net.TCPConn) {
 		log.Printf("handleConnection: options failure: %v", errOpt)
 		return
 	}
-	log.Printf("handleConnection: options: %v", opt)
+	log.Printf("handleConnection: options received: %v", opt)
 
 	go serverReader(conn, opt)
 

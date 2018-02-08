@@ -24,6 +24,7 @@ type config struct {
 	totalDuration  string
 	opt            options
 	passiveClient  bool // suppress client send
+	udp            bool
 }
 
 type options struct {
@@ -61,6 +62,7 @@ func main() {
 	flag.BoolVar(&app.passiveClient, "passiveClient", false, "suppress client writes")
 	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
 	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
+	flag.BoolVar(&app.udp, "udp", false, "run client in UDP mode")
 
 	flag.Parse()
 
@@ -94,7 +96,14 @@ func main() {
 		return
 	}
 
-	log.Printf("client mode")
+	var proto string
+	if app.udp {
+		proto = "udp"
+	} else {
+		proto = "tcp"
+	}
+
+	log.Printf("client mode, %s protocol", proto)
 	open(&app)
 }
 

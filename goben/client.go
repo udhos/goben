@@ -19,24 +19,31 @@ func open(app *config) {
 
 		for i := 0; i < app.connections; i++ {
 
-			log.Printf("open: opening TCP %d/%d: %s", i, app.connections, hh)
+			var proto string
+			if app.udp {
+				proto = "udp"
+			} else {
+				proto = "tcp"
+			}
 
-			conn, errDial := net.Dial("tcp", hh)
+			log.Printf("open: opening %s %d/%d: %s", proto, i, app.connections, hh)
+
+			conn, errDial := net.Dial(proto, hh)
 			if errDial != nil {
-				log.Printf("open: dial: %s: %v", hh, errDial)
+				log.Printf("open: dial %s: %s: %v", proto, hh, errDial)
 				continue
 			}
 
 			wg.Add(1)
-			c := conn.(*net.TCPConn)
-			go handleConnectionClient(app, &wg, c, i, app.connections)
+			//c := conn.(*net.TCPConn)
+			go handleConnectionClient(app, &wg, conn, i, app.connections)
 		}
 	}
 
 	wg.Wait()
 }
 
-func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, c, connections int) {
+func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
 	defer wg.Done()
 
 	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
@@ -48,6 +55,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 		log.Printf("handleConnectionClient: options failure: %v", errOpt)
 		return
 	}
+	log.Printf("handleConnectionClient: options sent: %v", opt)
 
 	doneReader := make(chan struct{})
 	doneWriter := make(chan struct{})
@@ -74,7 +82,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn *net.TCPConn, 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
+func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0)
@@ -84,7 +92,7 @@ func clientReader(conn *net.TCPConn, c, connections int, done chan struct{}, opt
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn *net.TCPConn, c, connections int, done chan struct{}, opt options) {
+func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
