@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const version = "0.0"
@@ -53,14 +54,17 @@ func main() {
 	flag.Var(&app.listeners, "listeners", "comma-separated list of listen addresses\nyou may prepend an optional host to every port: [host]:port")
 	flag.StringVar(&app.defaultPort, "defaultPort", ":8080", "default port")
 	flag.IntVar(&app.connections, "connections", 1, "number of parallel connections")
-	flag.StringVar(&app.reportInterval, "reportInterval", "2s", "periodic report interval")
-	flag.StringVar(&app.totalDuration, "totalDuration", "10s", "test total duration")
+	flag.StringVar(&app.reportInterval, "reportInterval", "2s", "periodic report interval\nunspecified time unit defaults to second")
+	flag.StringVar(&app.totalDuration, "totalDuration", "10s", "test total duration\nunspecified time unit defaults to second")
 	flag.IntVar(&app.opt.ReadSize, "readSize", 20000, "read buffer size in bytes")
 	flag.IntVar(&app.opt.WriteSize, "writeSize", 20000, "write buffer size in bytes")
 	flag.BoolVar(&app.passiveClient, "passiveClient", false, "suppress client writes")
 	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
 
 	flag.Parse()
+
+	app.reportInterval = defaultTimeUnit(app.reportInterval)
+	app.totalDuration = defaultTimeUnit(app.totalDuration)
 
 	var errInterval error
 	app.opt.ReportInterval, errInterval = time.ParseDuration(app.reportInterval)
@@ -91,4 +95,15 @@ func main() {
 
 	log.Printf("client mode")
 	open(&app)
+}
+
+// append "s" (second) to time string
+func defaultTimeUnit(s string) string {
+	if len(s) < 1 {
+		return s
+	}
+	if unicode.IsDigit(rune(s[len(s)-1])) {
+		return s + "s"
+	}
+	return s
 }
