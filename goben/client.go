@@ -44,6 +44,12 @@ func open(app *config) {
 	wg.Wait()
 }
 
+// ExportInfo records data for export
+type ExportInfo struct {
+	Input  ChartData
+	Output ChartData
+}
+
 func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
 	defer wg.Done()
 
@@ -75,12 +81,14 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	doneReader := make(chan struct{})
 	doneWriter := make(chan struct{})
 
-	statReader := chartData{}
-	statWriter := chartData{}
+	info := ExportInfo{
+		ChartData{},
+		ChartData{},
+	}
 
-	go clientReader(conn, c, connections, doneReader, opt, &statReader)
+	go clientReader(conn, c, connections, doneReader, opt, &info.Input)
 	if !app.passiveClient {
-		go clientWriter(conn, c, connections, doneWriter, opt, &statWriter)
+		go clientWriter(conn, c, connections, doneWriter, opt, &info.Output)
 	}
 
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
@@ -97,9 +105,17 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		<-doneWriter // wait writer exit
 	}
 
+	if app.export != "" {
+		log.Printf("exporting test results to: %s", app.export)
+		errExport := export(app.export, &info)
+		if errExport != nil {
+			log.Printf("handleConnectionClient: export: %v", errExport)
+		}
+	}
+
 	if app.chart != "" {
 		log.Printf("rendering chart to: %s", app.chart)
-		errRender := chartRender(app.chart, &statReader, &statWriter)
+		errRender := chartRender(app.chart, &info.Input, &info.Output)
 		if errRender != nil {
 			log.Printf("handleConnectionClient: render: %v", errRender)
 		}
@@ -108,7 +124,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *chartData) {
+func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, stat)
@@ -118,7 +134,7 @@ func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt opt
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *chartData) {
+func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, stat)
@@ -138,14 +154,15 @@ type account struct {
 	calls     int
 }
 
-type chartData struct {
-	xValues []float64
-	yValues []float64
+// ChartData records data for chart
+type ChartData struct {
+	XValues []float64
+	YValues []float64
 }
 
 const fmtReport = "%7s %14s rate: %6d Mbps %6d %s"
 
-func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string, stat *chartData) {
+func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string, stat *ChartData) {
 	a.calls++
 	a.size += int64(n)
 
@@ -162,8 +179,8 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 
 		// save chart data
 		if stat != nil {
-			stat.xValues = append(stat.xValues, chartTime(now))
-			stat.yValues = append(stat.yValues, mbps)
+			stat.XValues = append(stat.XValues, chartTime(now))
+			stat.YValues = append(stat.YValues, mbps)
 		}
 	}
 }
@@ -175,7 +192,7 @@ func (a *account) average(start time.Time, label, cpsLabel string) {
 	log.Printf(fmtReport, "average", label, mbps, cps, cpsLabel)
 }
 
-func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *chartData) {
+func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
 
 	buf := make([]byte, bufSize)
 

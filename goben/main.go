@@ -26,6 +26,7 @@ type config struct {
 	passiveClient  bool // suppress client send
 	udp            bool
 	chart          string
+	export         string
 }
 
 type options struct {
@@ -65,6 +66,7 @@ func main() {
 	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
 	flag.BoolVar(&app.udp, "udp", false, "run client in UDP mode")
 	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client")
+	flag.StringVar(&app.export, "export", "", "output filename for exporting test results on client")
 
 	flag.Parse()
 

@@ -14,10 +14,10 @@ func chartTime(t time.Time) float64 {
 	return util.Time.ToFloat64(t)
 }
 
-func chartRender(filename string, input *chartData, output *chartData) error {
+func chartRender(filename string, input *ChartData, output *ChartData) error {
 
-	log.Printf("chartRender: input data points:  %d/%d", len(input.xValues), len(input.yValues))
-	log.Printf("chartRender: output data points: %d/%d", len(output.xValues), len(output.yValues))
+	log.Printf("chartRender: input data points:  %d/%d", len(input.XValues), len(input.YValues))
+	log.Printf("chartRender: output data points: %d/%d", len(output.XValues), len(output.YValues))
 
 	out, errCreate := os.Create(filename)
 	if errCreate != nil {
@@ -52,14 +52,14 @@ func chartRender(filename string, input *chartData, output *chartData) error {
 		Series: []chart.Series{
 			chart.ContinuousSeries{
 				Name:    "Input",
-				XValues: input.xValues,
-				YValues: input.yValues,
+				XValues: input.XValues,
+				YValues: input.YValues,
 			},
 			chart.ContinuousSeries{
 				Name:    "Output",
 				YAxis:   chart.YAxisSecondary,
-				XValues: output.xValues,
-				YValues: output.yValues,
+				XValues: output.XValues,
+				YValues: output.YValues,
 			},
 		},
 	}

@@ -24,6 +24,7 @@ Features
 - Simple usage: start the server then launch the client pointing to server's address.
 - Spawns multiple concurrent lightweight goroutines to handle multiple parallel traffic streams.
 - Can save test results as PNG chart.
+- Can export test results in YAML format.
 
 History
 =======
@@ -42,6 +43,7 @@ Install
 =======
 
     go get github.com/wcharczuk/go-chart
+    go get gopkg.in/yaml.v2
     go get github.com/udhos/goben
     go install github.com/udhos/goben/goben
 
