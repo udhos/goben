@@ -75,9 +75,12 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	doneReader := make(chan struct{})
 	doneWriter := make(chan struct{})
 
-	go clientReader(conn, c, connections, doneReader, opt)
+	statReader := chartData{}
+	statWriter := chartData{}
+
+	go clientReader(conn, c, connections, doneReader, opt, &statReader)
 	if !app.passiveClient {
-		go clientWriter(conn, c, connections, doneWriter, opt)
+		go clientWriter(conn, c, connections, doneWriter, opt, &statWriter)
 	}
 
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
@@ -94,23 +97,31 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		<-doneWriter // wait writer exit
 	}
 
+	if app.chart != "" {
+		log.Printf("rendering chart to: %s", app.chart)
+		errRender := chartRender(app.chart, &statReader, &statWriter)
+		if errRender != nil {
+			log.Printf("handleConnectionClient: render: %v", errRender)
+		}
+	}
+
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options) {
+func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *chartData) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0)
+	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, stat)
 
 	close(done)
 
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options) {
+func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *chartData) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
+	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, stat)
 
 	close(done)
 
@@ -127,9 +138,14 @@ type account struct {
 	calls     int
 }
 
+type chartData struct {
+	xValues []float64
+	yValues []float64
+}
+
 const fmtReport = "%7s %14s rate: %6d Mbps %6d %s"
 
-func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string) {
+func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string, stat *chartData) {
 	a.calls++
 	a.size += int64(n)
 
@@ -137,12 +153,18 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 	elap := now.Sub(a.prevTime)
 	if elap > reportInterval {
 		elapSec := elap.Seconds()
-		mbps := int64(float64(8*(a.size-a.prevSize)) / (1000000 * elapSec))
+		mbps := float64(8*(a.size-a.prevSize)) / (1000000 * elapSec)
 		cps := int64(float64(a.calls-a.prevCalls) / elapSec)
-		log.Printf(fmtReport, "report", label, mbps, cps, cpsLabel)
+		log.Printf(fmtReport, "report", label, int64(mbps), cps, cpsLabel)
 		a.prevTime = now
 		a.prevSize = a.size
 		a.prevCalls = a.calls
+
+		// save chart data
+		if stat != nil {
+			stat.xValues = append(stat.xValues, chartTime(now))
+			stat.yValues = append(stat.yValues, mbps)
+		}
 	}
 }
 
@@ -153,7 +175,7 @@ func (a *account) average(start time.Time, label, cpsLabel string) {
 	log.Printf(fmtReport, "average", label, mbps, cps, cpsLabel)
 }
 
-func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64) {
+func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *chartData) {
 
 	buf := make([]byte, bufSize)
 
@@ -181,7 +203,7 @@ func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.D
 			break
 		}
 
-		acc.update(n, reportInterval, label, cpsLabel)
+		acc.update(n, reportInterval, label, cpsLabel, stat)
 	}
 
 	acc.average(start, label, cpsLabel)

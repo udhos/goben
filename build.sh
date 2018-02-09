@@ -1,5 +1,7 @@
 #!/bin/sh
 
+go get github.com/wcharczuk/go-chart
+
 gobin=~/go/bin
 
 gofmt -s -w goben/*.go

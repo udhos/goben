@@ -23,6 +23,7 @@ Features
 - Written in [Go](https://golang.org/). Single executable file. No runtime dependency.
 - Simple usage: start the server then launch the client pointing to server's address.
 - Spawns multiple concurrent lightweight goroutines to handle multiple parallel traffic streams.
+- Can save test results as PNG chart.
 
 History
 =======
@@ -40,6 +41,7 @@ Requirements
 Install
 =======
 
+    go get github.com/wcharczuk/go-chart
     go get github.com/udhos/goben
     go install github.com/udhos/goben/goben
 

@@ -154,7 +154,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 		}
 
 		// account read from UDP socket
-		info.acc.update(n, info.opt.ReportInterval, "handleUDP", "rcv/s")
+		info.acc.update(n, info.opt.ReportInterval, "handleUDP", "rcv/s", nil)
 	}
 }
 
@@ -191,7 +191,7 @@ func handleConnection(app *config, conn *net.TCPConn) {
 func serverReader(conn net.Conn, opt options) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0)
+	workLoop("serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, nil)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
@@ -199,7 +199,7 @@ func serverReader(conn net.Conn, opt options) {
 func serverWriter(conn net.Conn, opt options) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
+	workLoop("serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
@@ -217,7 +217,7 @@ func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *accou
 		return conn.WriteTo(b, dst)
 	}
 
-	workLoop("serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed)
+	workLoop("serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriterTo: exiting: %v", dst)
 }
