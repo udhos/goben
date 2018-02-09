@@ -4,6 +4,15 @@
 # goben
 goben is a golang tool to measure TCP/UDP transport layer throughput between hosts.
 
+* [Features](#features)
+* [History](#history)
+* [Requirements](#requirements)
+* [Install](#install)
+* [Usage](#usage)
+* [Example](#example)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
+
 Features
 ========
 
@@ -13,10 +22,18 @@ Features
 - Simple usage: start the server then launch the client pointing to server's address.
 - Spawns multiple concurrent lightweight goroutines to handle multiple parallel traffic streams.
 
+History
+=======
+
+- Years ago out of frustration with [iperf2](https://sourceforge.net/projects/iperf2/) limitations, I wrote the [nepim](http://www.nongnu.org/nepim/) tool. Nepim was more customizable, easier to use, reported simpler results, was lighter on CPU. 
+- Later I found another amazing tool [nuttcp](https://www.nuttcp.net/). One can read about nepim and nuttcp here: [nepim and nuttcp](https://www.linux.com/news/benchmarking-network-performance-network-pipemeter-lmbench-and-nuttcp).
+- [goben](https://github.com/udhos/goben) is intended to fix shortcomings of nepim: (1) Take advantage of multiple CPUSs while not wasting processing power. Nepim was single-threaded. (2) Be easily portable to multiple platforms. Nepim was heavily tied to UNIX-like world. (3) Use a simpler synchronous code flow. Nepim used hard-to-follow asynchronous architecture.
+
 Requirements
 ============
 
 - You need a [system with the Go language](https://golang.org/dl/) in order to build the application. There is no special requirement for running it.
+- You can also download a binary release from https://github.com/udhos/goben/releases
 
 Install
 =======
