@@ -1,6 +1,8 @@
 [![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/udhos/goben/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/udhos/goben)](https://goreportcard.com/report/github.com/udhos/goben)
 
+[![asciicast](https://asciinema.org/a/2fVi4HunBbwwMqLx1jIbytdZq.png)](https://asciinema.org/a/2fVi4HunBbwwMqLx1jIbytdZq)
+
 # goben
 goben is a golang tool to measure TCP/UDP transport layer throughput between hosts.
 
