@@ -52,27 +52,28 @@ type ExportInfo struct {
 	Output ChartData
 }
 
-func sendOptions(app *config, conn io.Writer) {
+func sendOptions(app *config, conn io.Writer) error {
 	opt := app.opt
 	if app.udp {
 		var optBuf bytes.Buffer
 		enc := gob.NewEncoder(&optBuf)
 		if errOpt := enc.Encode(&opt); errOpt != nil {
 			log.Printf("handleConnectionClient: UDP options failure: %v", errOpt)
-			return
+			return errOpt
 		}
 		_, optWriteErr := conn.Write(optBuf.Bytes())
 		if optWriteErr != nil {
 			log.Printf("handleConnectionClient: UDP options write: %v", optWriteErr)
-			return
+			return optWriteErr
 		}
 	} else {
 		enc := gob.NewEncoder(conn)
 		if errOpt := enc.Encode(&opt); errOpt != nil {
 			log.Printf("handleConnectionClient: TCP options failure: %v", errOpt)
-			return
+			return errOpt
 		}
 	}
+	return nil
 }
 
 func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
@@ -80,7 +81,10 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 
 	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
 
-	sendOptions(app, conn)
+	if errOpt := sendOptions(app, conn); errOpt != nil {
+		return
+	}
+
 	opt := app.opt
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 
