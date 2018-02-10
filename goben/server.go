@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	//"io"
 	"fmt"
 	"log"
 	"net"
@@ -95,8 +94,6 @@ type udpInfo struct {
 	acc    *account
 	start  time.Time
 }
-
-type udpTable map[string]*udpInfo
 
 func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	defer wg.Done()

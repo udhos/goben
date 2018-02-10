@@ -65,10 +65,18 @@ func main() {
 	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
 	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
 	flag.BoolVar(&app.udp, "udp", false, "run client in UDP mode")
-	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client")
-	flag.StringVar(&app.export, "export", "", "output filename for exporting test results on client")
+	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client\nexample: -chart chart-%d.png")
+	flag.StringVar(&app.export, "export", "", "output filename for exporting test results on client\nexample: -export export-%d.yaml")
 
 	flag.Parse()
+
+	if app.chart != "" && !strings.Contains(app.chart, "%d") {
+		log.Panicf("bad chart: filename requires '%%d': %s", app.chart)
+	}
+
+	if app.export != "" && !strings.Contains(app.export, "%d") {
+		log.Panicf("bad export: filename requires '%%d': %s", app.export)
+	}
 
 	app.reportInterval = defaultTimeUnit(app.reportInterval)
 	app.totalDuration = defaultTimeUnit(app.totalDuration)

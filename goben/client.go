@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"log"
 	"net"
 	"runtime"
@@ -106,18 +107,20 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	}
 
 	if app.export != "" {
-		log.Printf("exporting test results to: %s", app.export)
-		errExport := export(app.export, &info)
+		filename := fmt.Sprintf(app.export, c)
+		log.Printf("exporting test results to: %s", filename)
+		errExport := export(filename, &info)
 		if errExport != nil {
-			log.Printf("handleConnectionClient: export: %v", errExport)
+			log.Printf("handleConnectionClient: export: %s: %v", filename, errExport)
 		}
 	}
 
 	if app.chart != "" {
-		log.Printf("rendering chart to: %s", app.chart)
-		errRender := chartRender(app.chart, &info.Input, &info.Output)
+		filename := fmt.Sprintf(app.chart, c)
+		log.Printf("rendering chart to: %s", filename)
+		errRender := chartRender(filename, &info.Input, &info.Output)
 		if errRender != nil {
-			log.Printf("handleConnectionClient: render: %v", errRender)
+			log.Printf("handleConnectionClient: render: %s: %v", filename, errRender)
 		}
 	}
 
