@@ -77,6 +77,8 @@ LOOP:
 func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
 	defer wg.Done()
 
+	var id int
+
 	for {
 		conn, errAccept := listener.Accept()
 		if errAccept != nil {
@@ -84,7 +86,8 @@ func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
 			break
 		}
 		c := conn.(*net.TCPConn)
-		go handleConnection(app, c)
+		go handleConnection(app, c, id, 0)
+		id++
 	}
 }
 
@@ -93,6 +96,7 @@ type udpInfo struct {
 	opt    options
 	acc    *account
 	start  time.Time
+	id     int
 }
 
 func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
@@ -102,10 +106,11 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 	buf := make([]byte, app.opt.ReadSize)
 
+	var idCount int
+
 	for {
 		var info *udpInfo
 		n, src, errRead := conn.ReadFromUDP(buf)
-		//log.Printf("ReadFromUDP: size=%d from %s: error: %v", n, src, errRead)
 		if src == nil {
 			log.Printf("handleUDP: read nil src: error: %v", errRead)
 			continue
@@ -119,7 +124,9 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 				remote: src,
 				acc:    &account{},
 				start:  time.Now(),
+				id:     idCount,
 			}
+			idCount++
 			info.acc.prevTime = info.start
 			tab[src.String()] = info
 
@@ -132,30 +139,32 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 			if !info.opt.PassiveServer {
 				opt := info.opt // copy for gorouting
-				go serverWriterTo(conn, opt, src, info.acc)
+				go serverWriterTo(conn, opt, src, info.acc, info.id, 0)
 			}
 
 			continue
 		}
 
+		connIndex := fmt.Sprintf("%d/%d", info.id, 0)
+
 		if errRead != nil {
-			log.Printf("handleUDP: read error: %s: %v", src, errRead)
+			log.Printf("handleUDP: %s read error: %s: %v", connIndex, src, errRead)
 			continue
 		}
 
 		if time.Since(info.start) > info.opt.TotalDuration {
 			log.Printf("handleUDP: total duration %s timer: %s", info.opt.TotalDuration, src)
-			info.acc.average(info.start, "handleUDP", "rcv/s")
+			info.acc.average(info.start, connIndex, "handleUDP", "rcv/s")
 			log.Printf("handleUDP: FIXME: remove idle udp entry from udp table")
 			continue
 		}
 
 		// account read from UDP socket
-		info.acc.update(n, info.opt.ReportInterval, "handleUDP", "rcv/s", nil)
+		info.acc.update(n, info.opt.ReportInterval, connIndex, "handleUDP", "rcv/s", nil)
 	}
 }
 
-func handleConnection(app *config, conn *net.TCPConn) {
+func handleConnection(app *config, conn *net.TCPConn, c, connections int) {
 	defer conn.Close()
 
 	log.Printf("handleConnection: incoming: %v", conn.RemoteAddr())
@@ -169,10 +178,10 @@ func handleConnection(app *config, conn *net.TCPConn) {
 	}
 	log.Printf("handleConnection: options received: %v", opt)
 
-	go serverReader(conn, opt)
+	go serverReader(conn, opt, c, connections)
 
 	if !opt.PassiveServer {
-		go serverWriter(conn, opt)
+		go serverWriter(conn, opt, c, connections)
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
@@ -185,23 +194,27 @@ func handleConnection(app *config, conn *net.TCPConn) {
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-func serverReader(conn net.Conn, opt options) {
+func serverReader(conn net.Conn, opt options, c, connections int) {
 	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, nil)
+	connIndex := fmt.Sprintf("%d/%d", c, connections)
+
+	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, nil)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriter(conn net.Conn, opt options) {
+func serverWriter(conn net.Conn, opt options, c, connections int) {
 	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
 
-	workLoop("serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
+	connIndex := fmt.Sprintf("%d/%d", c, connections)
+
+	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *account) {
+func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *account, c, connections int) {
 	log.Printf("serverWriterTo: starting: %v", dst)
 
 	start := acc.prevTime
@@ -214,7 +227,9 @@ func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *accou
 		return conn.WriteTo(b, dst)
 	}
 
-	workLoop("serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
+	connIndex := fmt.Sprintf("%d/%d", c, connections)
+
+	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriterTo: exiting: %v", dst)
 }

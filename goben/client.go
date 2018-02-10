@@ -130,7 +130,9 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, stat)
+	connIndex := fmt.Sprintf("%d/%d", c, connections)
+
+	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, stat)
 
 	close(done)
 
@@ -140,7 +142,9 @@ func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt opt
 func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
-	workLoop("clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, stat)
+	connIndex := fmt.Sprintf("%d/%d", c, connections)
+
+	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, stat)
 
 	close(done)
 
@@ -163,9 +167,9 @@ type ChartData struct {
 	YValues []float64
 }
 
-const fmtReport = "%7s %14s rate: %6d Mbps %6d %s"
+const fmtReport = "%s %7s %14s rate: %6d Mbps %6d %s"
 
-func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel string, stat *ChartData) {
+func (a *account) update(n int, reportInterval time.Duration, conn, label, cpsLabel string, stat *ChartData) {
 	a.calls++
 	a.size += int64(n)
 
@@ -175,7 +179,7 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 		elapSec := elap.Seconds()
 		mbps := float64(8*(a.size-a.prevSize)) / (1000000 * elapSec)
 		cps := int64(float64(a.calls-a.prevCalls) / elapSec)
-		log.Printf(fmtReport, "report", label, int64(mbps), cps, cpsLabel)
+		log.Printf(fmtReport, conn, "report", label, int64(mbps), cps, cpsLabel)
 		a.prevTime = now
 		a.prevSize = a.size
 		a.prevCalls = a.calls
@@ -188,14 +192,14 @@ func (a *account) update(n int, reportInterval time.Duration, label, cpsLabel st
 	}
 }
 
-func (a *account) average(start time.Time, label, cpsLabel string) {
+func (a *account) average(start time.Time, conn, label, cpsLabel string) {
 	elapSec := time.Since(start).Seconds()
 	mbps := int64(float64(8*a.size) / (1000000 * elapSec))
 	cps := int64(float64(a.calls) / elapSec)
-	log.Printf(fmtReport, "average", label, mbps, cps, cpsLabel)
+	log.Printf(fmtReport, conn, "average", label, mbps, cps, cpsLabel)
 }
 
-func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
+func workLoop(conn, label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
 
 	buf := make([]byte, bufSize)
 
@@ -219,12 +223,12 @@ func workLoop(label, cpsLabel string, f call, bufSize int, reportInterval time.D
 
 		n, errCall := f(buf)
 		if errCall != nil {
-			log.Printf("workLoop: %s: %v", label, errCall)
+			log.Printf("workLoop: %s %s: %v", conn, label, errCall)
 			break
 		}
 
-		acc.update(n, reportInterval, label, cpsLabel, stat)
+		acc.update(n, reportInterval, conn, label, cpsLabel, stat)
 	}
 
-	acc.average(start, label, cpsLabel)
+	acc.average(start, conn, label, cpsLabel)
 }
