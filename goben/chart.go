@@ -64,7 +64,5 @@ func chartRender(filename string, input *ChartData, output *ChartData) error {
 		},
 	}
 
-	graph.Render(chart.PNG, out)
-
-	return nil
+	return graph.Render(chart.PNG, out)
 }

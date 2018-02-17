@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"runtime"
@@ -51,12 +52,7 @@ type ExportInfo struct {
 	Output ChartData
 }
 
-func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
-	defer wg.Done()
-
-	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
-
-	// send options
+func sendOptions(app *config, conn io.Writer) {
 	opt := app.opt
 	if app.udp {
 		var optBuf bytes.Buffer
@@ -77,6 +73,15 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 			return
 		}
 	}
+}
+
+func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
+	defer wg.Done()
+
+	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
+
+	sendOptions(app, conn)
+	opt := app.opt
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 
 	doneReader := make(chan struct{})
