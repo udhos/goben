@@ -164,7 +164,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	}
 }
 
-func handleConnection(app *config, conn *net.TCPConn, c, connections int) {
+func handleConnection(_ *config, conn *net.TCPConn, c, connections int) {
 	defer conn.Close()
 
 	log.Printf("handleConnection: incoming: %v", conn.RemoteAddr())
@@ -214,7 +214,7 @@ func serverWriter(conn net.Conn, opt options, c, connections int) {
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriterTo(conn *net.UDPConn, opt options, dst *net.UDPAddr, acc *account, c, connections int) {
+func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, c, connections int) {
 	log.Printf("serverWriterTo: starting: %v", dst)
 
 	start := acc.prevTime
