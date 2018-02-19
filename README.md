@@ -38,13 +38,11 @@ Requirements
 ============
 
 - You need a [system with the Go language](https://golang.org/dl/) in order to build the application. There is no special requirement for running it.
+- Dep https://github.com/golang/dep
 - You can also download a binary release from https://github.com/udhos/goben/releases
 
 Install
 =======
-
-    go get github.com/wcharczuk/go-chart
-    go get gopkg.in/yaml.v2
     go get github.com/udhos/goben
     go install github.com/udhos/goben/goben
 

@@ -102,8 +102,7 @@ type udpInfo struct {
 func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	defer wg.Done()
 
-	tab := map[string]*udpInfo{}
-
+	tab := make(map[string]*udpInfo)
 	buf := make([]byte, app.opt.ReadSize)
 
 	var idCount int
