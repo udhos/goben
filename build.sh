@@ -1,7 +1,7 @@
 #!/bin/sh
 
 go get github.com/wcharczuk/go-chart
-go get gopkg.in/yaml.v2
+go get gopkg.in/v2/yaml
 
 gobin=~/go/bin
 

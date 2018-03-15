@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/v2/yaml"
 )
 
 func export(filename string, info *ExportInfo) error {
