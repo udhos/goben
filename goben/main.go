@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const version = "0.2"
+const version = "0.3"
 
 type hostList []string
 
