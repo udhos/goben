@@ -25,7 +25,7 @@ Features
 - Simple usage: start the server then launch the client pointing to server's address.
 - Spawns multiple concurrent lightweight goroutines to handle multiple parallel traffic streams.
 - Can save test results as PNG chart.
-- Can export test results in YAML format.
+- Can export test results as YAML or CSV.
 
 History
 =======
