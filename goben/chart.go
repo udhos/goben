@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -36,11 +35,6 @@ func chartRender(filename string, input *ChartData, output *ChartData) error {
 				Show: true, //enables / displays the x-axis
 			},
 			TickPosition: chart.TickPositionBetweenTicks,
-			ValueFormatter: func(v interface{}) string {
-				typed := v.(float64)
-				typedDate := util.Time.FromFloat64(typed)
-				return fmt.Sprintf("%02d:%02d:%02d", typedDate.Hour(), typedDate.Minute(), typedDate.Second())
-			},
 		},
 		YAxis: chart.YAxis{
 			Name: "Mbps",
@@ -54,12 +48,12 @@ func chartRender(filename string, input *ChartData, output *ChartData) error {
 			},
 		},
 		Series: []chart.Series{
-			chart.ContinuousSeries{
+			chart.TimeSeries{
 				Name:    "Input",
 				XValues: input.XValues,
 				YValues: input.YValues,
 			},
-			chart.ContinuousSeries{
+			chart.TimeSeries{
 				Name:    "Output",
 				YAxis:   chart.YAxisSecondary,
 				XValues: output.XValues,

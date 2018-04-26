@@ -181,7 +181,7 @@ type account struct {
 
 // ChartData records data for chart
 type ChartData struct {
-	XValues []float64
+	XValues []time.Time
 	YValues []float64
 }
 
@@ -204,7 +204,7 @@ func (a *account) update(n int, reportInterval time.Duration, conn, label, cpsLa
 
 		// save chart data
 		if stat != nil {
-			stat.XValues = append(stat.XValues, chartTime(now))
+			stat.XValues = append(stat.XValues, now)
 			stat.YValues = append(stat.YValues, mbps)
 		}
 	}

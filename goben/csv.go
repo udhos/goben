@@ -30,7 +30,7 @@ func exportCsv(filename string, info *ExportInfo) error {
 
 	entry[Dir] = "input"
 	for i, x := range info.Input.XValues {
-		entry[Time] = timeFromFloat(x).String()
+		entry[Time] = x.String()
 		entry[Rate] = fmt.Sprintf("%v", info.Input.YValues[i])
 		if err := w.Write(entry); err != nil {
 			return err
@@ -39,7 +39,7 @@ func exportCsv(filename string, info *ExportInfo) error {
 
 	entry[Dir] = "output"
 	for i, x := range info.Output.XValues {
-		entry[Time] = timeFromFloat(x).String()
+		entry[Time] = x.String()
 		entry[Rate] = fmt.Sprintf("%v", info.Output.YValues[i])
 		if err := w.Write(entry); err != nil {
 			return err
