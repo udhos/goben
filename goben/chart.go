@@ -14,6 +14,10 @@ func chartTime(t time.Time) float64 {
 	return util.Time.ToFloat64(t)
 }
 
+func timeFromFloat(f float64) time.Time {
+	return util.Time.FromFloat64(f)
+}
+
 func chartRender(filename string, input *ChartData, output *ChartData) error {
 
 	log.Printf("chartRender: input data points:  %d/%d", len(input.XValues), len(input.YValues))

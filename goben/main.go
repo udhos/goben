@@ -27,6 +27,7 @@ type config struct {
 	udp            bool
 	chart          string
 	export         string
+	csv            string
 }
 
 type options struct {
@@ -66,7 +67,8 @@ func main() {
 	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
 	flag.BoolVar(&app.udp, "udp", false, "run client in UDP mode")
 	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client\nexample: -chart chart-%d.png")
-	flag.StringVar(&app.export, "export", "", "output filename for exporting test results on client\nexample: -export export-%d.yaml")
+	flag.StringVar(&app.export, "export", "", "output filename for YAML exporting test results on client\nexample: -export export-%d.yaml")
+	flag.StringVar(&app.csv, "csv", "", "output filename for CSV exporting test results on client\nexample: -csv export-%d.csv")
 
 	flag.Parse()
 
@@ -76,6 +78,10 @@ func main() {
 
 	if app.export != "" && !strings.Contains(app.export, "%d") {
 		log.Panicf("bad export: filename requires '%%d': %s", app.export)
+	}
+
+	if app.csv != "" && !strings.Contains(app.csv, "%d") {
+		log.Panicf("bad csv: filename requires '%%d': %s", app.csv)
 	}
 
 	app.reportInterval = defaultTimeUnit(app.reportInterval)
