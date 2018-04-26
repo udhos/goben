@@ -1,8 +1,16 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
+)
+
+// CSV fields
+const (
+	Dir  = 0 // Direction
+	Time = 1 // Timestamp
+	Rate = 2 // Rate
 )
 
 func exportCsv(filename string, info *ExportInfo) error {
@@ -11,29 +19,34 @@ func exportCsv(filename string, info *ExportInfo) error {
 	if errCreate != nil {
 		return errCreate
 	}
-	defer out.Close()
 
-	format := "%s,\"%v\",%v\n"
+	w := csv.NewWriter(out)
 
-	if _, errHeader := out.Write([]byte(fmt.Sprintf(format, "DIRECTION", "TIME", "RATE"))); errHeader != nil {
+	entry := []string{"DIRECTION", "TIME", "RATE"}
+
+	if errHeader := w.Write(entry); errHeader != nil {
 		return errHeader
 	}
 
+	entry[Dir] = "input"
 	for i, x := range info.Input.XValues {
-		y := info.Input.XValues[i]
-		s := fmt.Sprintf(format, "input", timeFromFloat(x), y)
-		if _, err := out.Write([]byte(s)); err != nil {
+		entry[Time] = timeFromFloat(x).String()
+		entry[Rate] = fmt.Sprintf("%v", info.Input.YValues[i])
+		if err := w.Write(entry); err != nil {
 			return err
 		}
 	}
 
+	entry[Dir] = "output"
 	for i, x := range info.Output.XValues {
-		y := info.Output.XValues[i]
-		s := fmt.Sprintf(format, "output", timeFromFloat(x), y)
-		if _, err := out.Write([]byte(s)); err != nil {
+		entry[Time] = timeFromFloat(x).String()
+		entry[Rate] = fmt.Sprintf("%v", info.Output.YValues[i])
+		if err := w.Write(entry); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	w.Flush()
+
+	return out.Close()
 }
