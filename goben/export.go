@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"gopkg.in/v2/yaml"
@@ -20,9 +19,7 @@ func export(filename string, info *ExportInfo) error {
 		return errMarshall
 	}
 
-	n, errWrite := out.Write(b)
-
-	log.Printf("export: buffer=%d, file=%d", len(b), n)
+	_, errWrite := out.Write(b)
 
 	return errWrite
 }
