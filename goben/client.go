@@ -92,13 +92,21 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	doneWriter := make(chan struct{})
 
 	info := ExportInfo{
-		ChartData{},
-		ChartData{},
+		Input:  ChartData{},
+		Output: ChartData{},
 	}
 
-	go clientReader(conn, c, connections, doneReader, opt, &info.Input)
+	var input *ChartData
+	var output *ChartData
+
+	if app.csv != "" || app.export != "" || app.chart != "" {
+		input = &info.Input
+		output = &info.Output
+	}
+
+	go clientReader(conn, c, connections, doneReader, opt, input)
 	if !app.passiveClient {
-		go clientWriter(conn, c, connections, doneWriter, opt, &info.Output)
+		go clientWriter(conn, c, connections, doneWriter, opt, output)
 	}
 
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
