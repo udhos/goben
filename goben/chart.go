@@ -34,7 +34,8 @@ func chartRender(filename string, input *ChartData, output *ChartData) error {
 			Style: chart.Style{
 				Show: true, //enables / displays the x-axis
 			},
-			TickPosition: chart.TickPositionBetweenTicks,
+			TickPosition:   chart.TickPositionBetweenTicks,
+			ValueFormatter: chart.TimeMinuteValueFormatter,
 		},
 		YAxis: chart.YAxis{
 			Name: "Mbps",
