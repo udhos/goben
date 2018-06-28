@@ -28,6 +28,7 @@ type config struct {
 	chart          string
 	export         string
 	csv            string
+	ascii          bool // plot ascii chart
 }
 
 type options struct {
@@ -69,6 +70,7 @@ func main() {
 	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client\nexample: -chart chart-%d.png")
 	flag.StringVar(&app.export, "export", "", "output filename for YAML exporting test results on client\nexample: -export export-%d.yaml")
 	flag.StringVar(&app.csv, "csv", "", "output filename for CSV exporting test results on client\nexample: -csv export-%d.csv")
+	flag.BoolVar(&app.ascii, "ascii", true, "plot ascii chart")
 
 	flag.Parse()
 

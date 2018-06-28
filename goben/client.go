@@ -99,7 +99,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	var input *ChartData
 	var output *ChartData
 
-	if app.csv != "" || app.export != "" || app.chart != "" {
+	if app.csv != "" || app.export != "" || app.chart != "" || app.ascii {
 		input = &info.Input
 		output = &info.Output
 	}
@@ -149,6 +149,8 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 			log.Printf("handleConnectionClient: render PNG: %s: %v", filename, errRender)
 		}
 	}
+
+	plotascii(&info)
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }

@@ -2,6 +2,7 @@
 
 go get github.com/wcharczuk/go-chart
 go get gopkg.in/v2/yaml
+go get github.com/guptarohit/asciigraph
 
 gobin=~/go/bin
 

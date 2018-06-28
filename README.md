@@ -67,39 +67,70 @@ Example
 Server side:
 
     $ goben
-    2018/02/08 18:37:28 goben version 0.1 runtime go1.10rc2 GOMAXPROCS=1
-    2018/02/08 18:37:28 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
-    2018/02/08 18:37:28 reportInterval=2s totalDuration=10s
-    2018/02/08 18:37:28 server mode (use -hosts to switch to client mode)
-    2018/02/08 18:37:28 serve: spawning TCP listener: :8080
-    2018/02/08 18:37:28 serve: spawning UDP listener: :8080
+    2018/06/28 15:04:26 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
+    2018/06/28 15:04:26 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
+    2018/06/28 15:04:26 reportInterval=2s totalDuration=10s
+    2018/06/28 15:04:26 server mode (use -hosts to switch to client mode)
+    2018/06/28 15:04:26 serve: spawning TCP listener: :8080
+    2018/06/28 15:04:26 serve: spawning UDP listener: :8080
 
 Client side:
 
     $ goben -hosts localhost
-    2018/02/08 18:38:48 goben version 0.1 runtime go1.10rc2 GOMAXPROCS=1
-    2018/02/08 18:38:48 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
-    2018/02/08 18:38:48 reportInterval=2s totalDuration=10s
-    2018/02/08 18:38:48 client mode, tcp protocol
-    2018/02/08 18:38:48 open: opening tcp 0/1: localhost:8080
-    2018/02/08 18:38:48 handleConnectionClient: starting 0/1 [::1]:8080
-    2018/02/08 18:38:48 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}
-    2018/02/08 18:38:48 clientReader: starting: 0/1 [::1]:8080
-    2018/02/08 18:38:48 clientWriter: starting: 0/1 [::1]:8080
-    2018/02/08 18:38:50 report   clientReader rate:  11565 Mbps  28913 rcv/s
-    2018/02/08 18:38:50 report   clientWriter rate:  11189 Mbps  27973 snd/s
-    2018/02/08 18:38:52 report   clientReader rate:  11340 Mbps  28352 rcv/s
-    2018/02/08 18:38:52 report   clientWriter rate:  10975 Mbps  27438 snd/s
-    2018/02/08 18:38:54 report   clientReader rate:  11647 Mbps  29117 rcv/s
-    2018/02/08 18:38:54 report   clientWriter rate:  11272 Mbps  28180 snd/s
-    2018/02/08 18:38:56 report   clientReader rate:  10957 Mbps  27394 rcv/s
-    2018/02/08 18:38:56 report   clientWriter rate:  10603 Mbps  26508 snd/s
-    2018/02/08 18:38:58 workLoop: clientWriter: write tcp [::1]:55186->[::1]:8080: write: connection reset by peer
-    2018/02/08 18:38:58 average clientWriter rate: 10995 Mbps 27489 snd/s
-    2018/02/08 18:38:58 clientWriter: exiting: 0/1 [::1]:8080
-    2018/02/08 18:38:58 report   clientReader rate:  11297 Mbps  28244 rcv/s
-    2018/02/08 18:38:58 handleConnectionClient: 10s timer
-    2018/02/08 18:38:58 workLoop: clientReader: read tcp [::1]:55186->[::1]:8080: use of closed network connection
-    2018/02/08 18:38:58 average clientReader rate: 11361 Mbps 28402 rcv/s
-    2018/02/08 18:38:58 clientReader: exiting: 0/1 [::1]:8080
-    2018/02/08 18:38:58 handleConnectionClient: closing: 0/1 [::1]:8080
+    2018/06/28 15:04:28 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
+    2018/06/28 15:04:28 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
+    2018/06/28 15:04:28 reportInterval=2s totalDuration=10s
+    2018/06/28 15:04:28 client mode, tcp protocol
+    2018/06/28 15:04:28 open: opening tcp 0/1: localhost:8080
+    2018/06/28 15:04:28 handleConnectionClient: starting 0/1 [::1]:8080
+    2018/06/28 15:04:28 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}
+    2018/06/28 15:04:28 clientReader: starting: 0/1 [::1]:8080
+    2018/06/28 15:04:28 clientWriter: starting: 0/1 [::1]:8080
+    2018/06/28 15:04:30 0/1  report   clientReader rate:  13917 Mbps  34793 rcv/s
+    2018/06/28 15:04:30 0/1  report   clientWriter rate:  13468 Mbps  33670 snd/s
+    2018/06/28 15:04:32 0/1  report   clientReader rate:  14044 Mbps  35111 rcv/s
+    2018/06/28 15:04:32 0/1  report   clientWriter rate:  13591 Mbps  33978 snd/s
+    2018/06/28 15:04:34 0/1  report   clientReader rate:  12934 Mbps  32337 rcv/s
+    2018/06/28 15:04:34 0/1  report   clientWriter rate:  12517 Mbps  31294 snd/s
+    2018/06/28 15:04:36 0/1  report   clientReader rate:  13307 Mbps  33269 rcv/s
+    2018/06/28 15:04:36 0/1  report   clientWriter rate:  12878 Mbps  32196 snd/s
+    2018/06/28 15:04:38 0/1  report   clientWriter rate:  13330 Mbps  33325 snd/s
+    2018/06/28 15:04:38 0/1  report   clientReader rate:  13774 Mbps  34436 rcv/s
+    2018/06/28 15:04:38 handleConnectionClient: 10s timer
+    2018/06/28 15:04:38 workLoop: 0/1 clientWriter: write tcp [::1]:42130->[::1]:8080: use of closed network connection
+    2018/06/28 15:04:38 0/1 average   clientWriter rate:  13157 Mbps  32892 snd/s
+    2018/06/28 15:04:38 clientWriter: exiting: 0/1 [::1]:8080
+    2018/06/28 15:04:38 workLoop: 0/1 clientReader: read tcp [::1]:42130->[::1]:8080: use of closed network connection
+    2018/06/28 15:04:38 0/1 average   clientReader rate:  13595 Mbps  33989 rcv/s
+    2018/06/28 15:04:38 clientReader: exiting: 0/1 [::1]:8080
+    2018/06/28 15:04:38 input:
+     14038 ┤          ╭────╮
+     13939 ┤──────────╯    ╰╮
+     13840 ┼                ╰─╮
+     13741 ┤                  ╰╮                                    ╭──
+     13641 ┤                   ╰╮                               ╭───╯
+     13542 ┤                    ╰─╮                          ╭──╯
+     13443 ┤                      ╰╮                     ╭───╯
+     13344 ┤                       ╰─╮               ╭───╯
+     13245 ┤                         ╰╮          ╭───╯
+     13146 ┤                          ╰─╮    ╭───╯
+     13047 ┤                            ╰────╯
+     12948 ┤
+    2018/06/28 15:04:38 output:
+     13585 ┤          ╭────╮
+     13489 ┤──────────╯    ╰╮
+     13393 ┼                ╰─╮
+     13297 ┤                  ╰╮                                    ╭──
+     13201 ┤                   ╰╮                               ╭───╯
+     13105 ┤                    ╰─╮                          ╭──╯
+     13009 ┤                      ╰╮                     ╭───╯
+     12914 ┤                       ╰─╮               ╭───╯
+     12818 ┤                         ╰╮          ╭───╯
+     12722 ┤                          ╰─╮    ╭───╯
+     12626 ┤                            ╰────╯
+     12530 ┤
+    2018/06/28 15:04:38 handleConnectionClient: closing: 0/1 [::1]:8080
+
+
+--x--
+
