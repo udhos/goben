@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"gopkg.in/v2/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 func export(filename string, info *ExportInfo) error {

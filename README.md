@@ -43,6 +43,14 @@ Requirements
 Install
 =======
 
+## With Go Modules (since Go 1.11)
+
+    git clone https://github.com/udhos/goben ;# clone outside GOPATH
+    cd goben
+    go install ./goben
+
+## Without Go Modules (before Go 1.11)
+
     go get github.com/wcharczuk/go-chart
     go get gopkg.in/yaml.v2
     go get github.com/udhos/goben
