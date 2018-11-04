@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"runtime"
 	"sync"
@@ -230,6 +231,7 @@ func (a *account) average(start time.Time, conn, label, cpsLabel string) {
 func workLoop(conn, label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
 
 	buf := make([]byte, bufSize)
+	rand.Read(buf)
 
 	start := time.Now()
 	acc := &account{}
