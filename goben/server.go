@@ -199,7 +199,7 @@ func serverReader(conn net.Conn, opt options, c, connections int) {
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := make([]byte, opt.WriteSize)
+	buf := make([]byte, opt.ReadSize)
 
 	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil)
 
