@@ -199,7 +199,9 @@ func serverReader(conn net.Conn, opt options, c, connections int) {
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, nil)
+	buf := make([]byte, opt.WriteSize)
+
+	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
@@ -209,7 +211,9 @@ func serverWriter(conn net.Conn, opt options, c, connections int) {
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
+	buf := randBuf(opt.WriteSize)
+
+	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
@@ -229,7 +233,9 @@ func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, 
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, nil)
+	buf := randBuf(opt.WriteSize)
+
+	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil)
 
 	log.Printf("serverWriterTo: exiting: %v", dst)
 }

@@ -161,7 +161,9 @@ func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt opt
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, opt.ReadSize, opt.ReportInterval, 0, stat)
+	buf := make([]byte, opt.ReadSize)
+
+	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat)
 
 	close(done)
 
@@ -173,11 +175,21 @@ func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt opt
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, opt.WriteSize, opt.ReportInterval, opt.MaxSpeed, stat)
+	buf := randBuf(opt.WriteSize)
+
+	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat)
 
 	close(done)
 
 	log.Printf("clientWriter: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
+}
+
+func randBuf(size int) []byte {
+	buf := make([]byte, size)
+	if _, err := rand.Read(buf); err != nil {
+		log.Printf("randBuf error: %v", err)
+	}
+	return buf
 }
 
 type call func(p []byte) (n int, err error)
@@ -228,10 +240,7 @@ func (a *account) average(start time.Time, conn, label, cpsLabel string) {
 	log.Printf(fmtReport, conn, "average", label, mbps, cps, cpsLabel)
 }
 
-func workLoop(conn, label, cpsLabel string, f call, bufSize int, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
-
-	buf := make([]byte, bufSize)
-	rand.Read(buf)
+func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
 
 	start := time.Now()
 	acc := &account{}
