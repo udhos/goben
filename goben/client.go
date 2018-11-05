@@ -125,7 +125,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	}
 
 	if app.csv != "" {
-		filename := fmt.Sprintf(app.csv, c)
+		filename := fmt.Sprintf(app.csv, c, conn.RemoteAddr())
 		log.Printf("exporting CSV test results to: %s", filename)
 		errExport := exportCsv(filename, &info)
 		if errExport != nil {
@@ -134,7 +134,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	}
 
 	if app.export != "" {
-		filename := fmt.Sprintf(app.export, c)
+		filename := fmt.Sprintf(app.export, c, conn.RemoteAddr())
 		log.Printf("exporting YAML test results to: %s", filename)
 		errExport := export(filename, &info)
 		if errExport != nil {
@@ -143,7 +143,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	}
 
 	if app.chart != "" {
-		filename := fmt.Sprintf(app.chart, c)
+		filename := fmt.Sprintf(app.chart, c, conn.RemoteAddr())
 		log.Printf("rendering chart to: %s", filename)
 		errRender := chartRender(filename, &info.Input, &info.Output)
 		if errRender != nil {
@@ -151,7 +151,7 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		}
 	}
 
-	plotascii(&info)
+	plotascii(&info, conn.RemoteAddr().String(), c)
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
