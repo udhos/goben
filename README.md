@@ -47,6 +47,7 @@ Install
 
     git clone https://github.com/udhos/goben ;# clone outside GOPATH
     cd goben
+    go test ./goben
     go install ./goben
 
 ## Without Go Modules (before Go 1.11)
