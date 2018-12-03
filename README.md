@@ -5,19 +5,22 @@
 [![asciicast](https://asciinema.org/a/lnkGSPBNIY8o3jhTtBJRLHLrh.png)](https://asciinema.org/a/lnkGSPBNIY8o3jhTtBJRLHLrh)
 
 # goben
+
 goben is a golang tool to measure TCP/UDP transport layer throughput between hosts.
 
 * [Features](#features)
 * [History](#history)
 * [Requirements](#requirements)
 * [Install](#install)
+  * [With Go Modules (since Go 1\.11)](#with-go-modules-since-go-111)
+  * [Without Go Modules (before Go 1\.11)](#without-go-modules-before-go-111)
 * [Usage](#usage)
+* [Command\-line Options](#command-line-options)
 * [Example](#example)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
-Features
-========
+# Features
 
 - Support for TCP and UDP.
 - Can limit maximum bandwidth.
@@ -27,21 +30,18 @@ Features
 - Can save test results as PNG chart.
 - Can export test results as YAML or CSV.
 
-History
-=======
+# History
 
 - Years ago out of frustration with [iperf2](https://sourceforge.net/projects/iperf2/) limitations, I wrote the [nepim](http://www.nongnu.org/nepim/) tool. One can find some known iperf problems here: [iperf caveats](https://support.cumulusnetworks.com/hc/en-us/articles/216509388-Throughput-Testing-and-Troubleshooting#network_testing_with_open_source_tools). Nepim was more customizable, easier to use, reported simpler to understand results, was lighter on CPU.
 - Later I found another amazing tool called [nuttcp](https://www.nuttcp.net/). One can read about nepim and nuttcp here: [nepim and nuttcp](https://www.linux.com/news/benchmarking-network-performance-network-pipemeter-lmbench-and-nuttcp).
 - [goben](https://github.com/udhos/goben) is intended to fix shortcomings of nepim: (1) Take advantage of multiple CPUs while not wasting processing power. Nepim was single-threaded. (2) Be easily portable to multiple platforms. Nepim was heavily tied to UNIX-like world. (3) Use a simpler synchronous code flow. Nepim used hard-to-follow asynchronous architecture.
 
-Requirements
-============
+# Requirements
 
 - You need a [system with the Go language](https://golang.org/dl/) in order to build the application. There is no special requirement for running it.
 - You can also download a binary release from https://github.com/udhos/goben/releases
 
-Install
-=======
+# Install
 
 ## With Go Modules (since Go 1.11)
 
@@ -57,8 +57,7 @@ Install
     go get github.com/udhos/goben
     go install github.com/udhos/goben/goben
 
-Usage
-=====
+# Usage
 
 Make sure ~/go/bin is in your shell PATH.
 
@@ -70,8 +69,61 @@ Start client:
 
     client$ goben -hosts 1.1.1.1 ;# 1.1.1.1 is server's address
 
-Example
-=======
+# Command-line Options
+
+Find several supported command-line switches by running 'goben -h':
+
+```
+$ goben -h
+Usage of goben:
+  -ascii
+        plot ascii chart (default true)
+  -chart string
+        output filename for rendering chart on client
+        '%d' is parallel connection index to host
+        '%s' is hostname:port
+        example: -chart chart-%d-%s.png
+  -connections int
+        number of parallel connections (default 1)
+  -csv string
+        output filename for CSV exporting test results on client
+        '%d' is parallel connection index to host
+        '%s' is hostname:port
+        example: -csv export-%d-%s.csv
+  -defaultPort string
+        default port (default ":8080")
+  -export string
+        output filename for YAML exporting test results on client
+        '%d' is parallel connection index to host
+        '%s' is hostname:port
+        example: -export export-%d-%s.yaml
+  -hosts value
+        comma-separated list of hosts
+        you may append an optional port to every host: host[:port]
+  -listeners value
+        comma-separated list of listen addresses
+        you may prepend an optional host to every port: [host]:port
+  -maxSpeed float
+        bandwidth limit in mbps (0 means unlimited)
+  -passiveClient
+        suppress client writes
+  -passiveServer
+        suppress server writes
+  -readSize int
+        read buffer size in bytes (default 50000)
+  -reportInterval string
+        periodic report interval
+        unspecified time unit defaults to second (default "2s")
+  -totalDuration string
+        test total duration
+        unspecified time unit defaults to second (default "10s")
+  -udp
+        run client in UDP mode
+  -writeSize int
+        write buffer size in bytes (default 50000)
+```
+
+# Example
 
 Server side:
 
