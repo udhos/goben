@@ -10,9 +10,9 @@ gofmt -s -w ./goben
 go tool fix ./goben
 go tool vet ./goben
 
-#[ -x $gobin/gosimple ] && $gobin/gosimple goben/*.go
-[ -x $gobin/golint ] && $gobin/golint goben/*.go
-#[ -x $gobin/staticcheck ] && $gobin/staticcheck goben/*.go
+#which gosimple >/dev/null && gosimple ./goben
+which golint >/dev/null && golint ./goben
+#which staticcheck >/dev/null && staticcheck ./goben
 
 go test ./goben
 go install -v ./goben

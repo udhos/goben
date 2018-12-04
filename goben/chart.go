@@ -3,19 +3,9 @@ package main
 import (
 	"log"
 	"os"
-	"time"
 
 	"github.com/wcharczuk/go-chart"
-	"github.com/wcharczuk/go-chart/util"
 )
-
-func chartTime(t time.Time) float64 {
-	return util.Time.ToFloat64(t)
-}
-
-func timeFromFloat(f float64) time.Time {
-	return util.Time.FromFloat64(f)
-}
 
 func chartRender(filename string, input *ChartData, output *ChartData) error {
 
