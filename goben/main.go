@@ -87,15 +87,15 @@ func main() {
 	flag.Parse()
 
 	if errChart := badExportFilename("-chart", app.chart); errChart != nil {
-		log.Panicf("%s\n", errChart.Error())
+		log.Panicf("%s", errChart.Error())
 	}
 
 	if errExport := badExportFilename("-export", app.export); errExport != nil {
-		log.Panicf("%s\n", errExport.Error())
+		log.Panicf("%s", errExport.Error())
 	}
 
 	if errCsv := badExportFilename("-csv", app.csv); errCsv != nil {
-		log.Panicf("%s\n", errCsv.Error())
+		log.Panicf("%s", errCsv.Error())
 	}
 
 	app.reportInterval = defaultTimeUnit(app.reportInterval)
