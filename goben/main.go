@@ -51,6 +51,18 @@ func (h *hostList) Set(value string) error {
 	return nil
 }
 
+func badExportFilename(parameter, filename string) error {
+	if filename == "" {
+		return nil
+	}
+
+	if strings.Contains(filename, "%d") && strings.Contains(filename, "%s") {
+		return nil
+	}
+
+	return fmt.Errorf("badExportFilename %s: filename requires '%%d' and '%%s': %s", parameter, filename)
+}
+
 func main() {
 
 	app := config{}
@@ -74,16 +86,16 @@ func main() {
 
 	flag.Parse()
 
-	if app.chart != "" && !strings.Contains(app.chart, "%d") && !strings.Contains(app.chart, "%s") {
-		log.Panicf("bad chart: filename requires '%%d' and '%%s': %s", app.chart)
+	if errChart := badExportFilename("-chart", app.chart); errChart != nil {
+		log.Panicf("%s\n", errChart.Error())
 	}
 
-	if app.export != "" && !strings.Contains(app.export, "%d") && !strings.Contains(app.export, "%s") {
-		log.Panicf("bad export: filename requires '%%d' and '%%s': %s", app.export)
+	if errExport := badExportFilename("-export", app.export); errExport != nil {
+		log.Panicf("%s\n", errExport.Error())
 	}
 
-	if app.csv != "" && !strings.Contains(app.csv, "%d") && !strings.Contains(app.csv, "%s") {
-		log.Panicf("bad csv: filename requires '%%d' and '%%s': %s", app.csv)
+	if errCsv := badExportFilename("-csv", app.csv); errCsv != nil {
+		log.Panicf("%s\n", errCsv.Error())
 	}
 
 	app.reportInterval = defaultTimeUnit(app.reportInterval)
