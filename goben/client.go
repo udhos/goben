@@ -110,11 +110,15 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 
 	log.Printf("handleConnectionClient: starting %s %d/%d %v", protoLabel(isTLS), c, connections, conn.RemoteAddr())
 
+	// send options
 	if errOpt := sendOptions(app, conn); errOpt != nil {
 		return
 	}
+	opt := app.opt
+	log.Printf("handleConnectionClient: options sent: %v", opt)
 
-	log.Printf("handleConnectionClient: FIXME WRITEME server does not send ack for UDP")
+	// receive ack
+	//log.Printf("handleConnectionClient: FIXME WRITEME server does not send ack for UDP")
 	if !app.udp {
 		var a ack
 		if errAck := ackRecv(app.udp, conn, &a); errAck != nil {
@@ -123,9 +127,6 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		}
 		log.Printf("handleConnectionClient: %s ack received", protoLabel(isTLS))
 	}
-
-	opt := app.opt
-	log.Printf("handleConnectionClient: options sent: %v", opt)
 
 	doneReader := make(chan struct{})
 	doneWriter := make(chan struct{})
