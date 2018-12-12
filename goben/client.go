@@ -114,6 +114,16 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		return
 	}
 
+	log.Printf("handleConnectionClient: FIXME WRITEME server does not send ack for UDP")
+	if !app.udp {
+		var a ack
+		if errAck := ackRecv(app.udp, conn, &a); errAck != nil {
+			log.Printf("handleConnectionClient: receiving ack: %v", errAck)
+			return
+		}
+		log.Printf("handleConnectionClient: %s ack received", protoLabel(isTLS))
+	}
+
 	opt := app.opt
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 

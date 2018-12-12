@@ -34,15 +34,6 @@ type config struct {
 	tls            bool
 }
 
-type options struct {
-	ReportInterval time.Duration
-	TotalDuration  time.Duration
-	ReadSize       int
-	WriteSize      int
-	PassiveServer  bool    // suppress server send
-	MaxSpeed       float64 // mbps
-}
-
 func (h *hostList) String() string {
 	return fmt.Sprint(*h)
 }

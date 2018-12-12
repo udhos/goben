@@ -223,6 +223,12 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	}
 	log.Printf("handleConnection: options received: %v", opt)
 
+	a := newAck()
+	if errAck := ackSend(false, conn, a); errAck != nil {
+		log.Printf("handleConnection: sending ack: %v", errAck)
+		return
+	}
+
 	go serverReader(conn, opt, c, connections, isTLS)
 
 	if !opt.PassiveServer {
