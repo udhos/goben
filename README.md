@@ -17,12 +17,13 @@ goben is a golang tool to measure TCP/UDP transport layer throughput between hos
 * [Usage](#usage)
 * [Command\-line Options](#command-line-options)
 * [Example](#example)
+* [TLS](#tls)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
 # Features
 
-- Support for TCP and UDP.
+- Support for TCP, UDP, TLS.
 - Can limit maximum bandwidth.
 - Written in [Go](https://golang.org/). Single executable file. No runtime dependency.
 - Simple usage: start the server then launch the client pointing to server's address.
@@ -194,9 +195,11 @@ Client side:
 
 # TLS
 
-If you want to use TLS, you will need a server-side certificate:
+For TLS, a server-side certificate is required:
 
     $ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
+
+If the certificate is available, goben server listens on TLS socket. Otherwise, it falls back to plain TCP.
 
 --x--
 
