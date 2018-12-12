@@ -70,7 +70,7 @@ func tlsDial(proto, h string) (net.Conn, error) {
 		InsecureSkipVerify: true,
 	}
 
-	conn, err := tls.Dial("tcp", h, conf)
+	conn, err := tls.Dial(proto, h, conf)
 
 	return conn, err
 }
