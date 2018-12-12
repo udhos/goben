@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -30,21 +31,48 @@ func open(app *config) {
 
 		for i := 0; i < app.connections; i++ {
 
-			log.Printf("open: opening %s %d/%d: %s", proto, i, app.connections, hh)
+			log.Printf("open: opening TLS=%v %s %d/%d: %s", app.tls, proto, i, app.connections, hh)
+
+			if !app.udp && app.tls {
+				// try TLS first
+				log.Printf("open: trying TLS")
+				conn, errDialTLS := tlsDial(proto, hh)
+				if errDialTLS == nil {
+					spawnClient(app, &wg, conn, i, app.connections, true)
+					continue
+				}
+				log.Printf("open: trying TLS: failure: %s: %s: %v", proto, hh, errDialTLS)
+			}
+
+			if !app.udp {
+				log.Printf("open: trying non-TLS TCP")
+			}
 
 			conn, errDial := net.Dial(proto, hh)
 			if errDial != nil {
 				log.Printf("open: dial %s: %s: %v", proto, hh, errDial)
 				continue
 			}
-
-			wg.Add(1)
-			//c := conn.(*net.TCPConn)
-			go handleConnectionClient(app, &wg, conn, i, app.connections)
+			spawnClient(app, &wg, conn, i, app.connections, false)
 		}
 	}
 
 	wg.Wait()
+}
+
+func spawnClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool) {
+	wg.Add(1)
+	go handleConnectionClient(app, wg, conn, c, connections, isTLS)
+}
+
+func tlsDial(proto, h string) (net.Conn, error) {
+	conf := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	conn, err := tls.Dial("tcp", h, conf)
+
+	return conn, err
 }
 
 // ExportInfo records data for export
@@ -77,10 +105,10 @@ func sendOptions(app *config, conn io.Writer) error {
 	return nil
 }
 
-func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int) {
+func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool) {
 	defer wg.Done()
 
-	log.Printf("handleConnectionClient: starting %d/%d %v", c, connections, conn.RemoteAddr())
+	log.Printf("handleConnectionClient: starting TLS=%v %d/%d %v", isTLS, c, connections, conn.RemoteAddr())
 
 	if errOpt := sendOptions(app, conn); errOpt != nil {
 		return

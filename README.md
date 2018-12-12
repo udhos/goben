@@ -192,6 +192,11 @@ Client side:
      12530 ┤
     2018/06/28 15:04:38 handleConnectionClient: closing: 0/1 [::1]:8080
 
+# TLS
+
+If you want to use TLS, you will need a server-side certificate:
+
+    $ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
 
 --x--
 

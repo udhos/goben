@@ -2,15 +2,27 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 )
 
 func serve(app *config) {
+
+	if app.tls && !fileExists(app.tlsKey) {
+		log.Printf("key file not found: %s - disabling TLS", app.tlsKey)
+		app.tls = false
+	}
+
+	if app.tls && !fileExists(app.tlsCert) {
+		log.Printf("cert file not found: %s - disabling TLS", app.tlsCert)
+		app.tls = false
+	}
 
 	var wg sync.WaitGroup
 
@@ -23,15 +35,49 @@ func serve(app *config) {
 	wg.Wait()
 }
 
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func listenTCP(app *config, wg *sync.WaitGroup, h string) {
-	log.Printf("serve: spawning TCP listener: %s", h)
+	log.Printf("listenTCP: TLS=%v spawning TCP listener: %s", app.tls, h)
+
+	// first try TLS
+	if app.tls {
+		listener, errTLS := listenTLS(app, h)
+		if errTLS == nil {
+			spawnAcceptLoopTCP(app, wg, listener, true)
+			return
+		}
+		log.Printf("listenTLS: %v", errTLS)
+		// TLS failed, try plain TCP
+	}
+
 	listener, errListen := net.Listen("tcp", h)
 	if errListen != nil {
-		log.Printf("listenTCP: %s: %v", h, errListen)
+		log.Printf("listenTCP: TLS=%v %s: %v", app.tls, h, errListen)
 		return
 	}
+	spawnAcceptLoopTCP(app, wg, listener, false)
+}
+
+func spawnAcceptLoopTCP(app *config, wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	wg.Add(1)
-	go handleTCP(app, wg, listener)
+	go handleTCP(app, wg, listener, isTLS)
+}
+
+func listenTLS(app *config, h string) (net.Listener, error) {
+	cert, errCert := tls.LoadX509KeyPair(app.tlsCert, app.tlsKey)
+	if errCert != nil {
+		log.Printf("listenTLS: failure loading TLS key pair: %v", errCert)
+		app.tls = false // disable TLS
+		return nil, errCert
+	}
+
+	config := &tls.Config{Certificates: []tls.Certificate{cert}}
+	listener, errListen := tls.Listen("tcp", h, config)
+	return listener, errListen
 }
 
 func listenUDP(app *config, wg *sync.WaitGroup, h string) {
@@ -74,7 +120,7 @@ LOOP:
 	return host + port
 }
 
-func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
+func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	defer wg.Done()
 
 	var id int
@@ -85,8 +131,7 @@ func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener) {
 			log.Printf("handle: accept: %v", errAccept)
 			break
 		}
-		c := conn.(*net.TCPConn)
-		go handleConnection(app, c, id, 0)
+		go handleConnection(conn, id, 0, isTLS)
 		id++
 	}
 }
@@ -164,10 +209,10 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	}
 }
 
-func handleConnection(_ *config, conn *net.TCPConn, c, connections int) {
+func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	defer conn.Close()
 
-	log.Printf("handleConnection: incoming: %v", conn.RemoteAddr())
+	log.Printf("handleConnection: incoming: TLS=%v %v", isTLS, conn.RemoteAddr())
 
 	// receive options
 	var opt options
