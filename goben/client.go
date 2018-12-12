@@ -108,7 +108,7 @@ func sendOptions(app *config, conn io.Writer) error {
 func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool) {
 	defer wg.Done()
 
-	log.Printf("handleConnectionClient: starting TLS=%v %d/%d %v", isTLS, c, connections, conn.RemoteAddr())
+	log.Printf("handleConnectionClient: starting %s %d/%d %v", protoLabel(isTLS), c, connections, conn.RemoteAddr())
 
 	if errOpt := sendOptions(app, conn); errOpt != nil {
 		return

@@ -212,7 +212,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	defer conn.Close()
 
-	log.Printf("handleConnection: incoming: TLS=%v %v", isTLS, conn.RemoteAddr())
+	log.Printf("handleConnection: incoming: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
 	// receive options
 	var opt options
@@ -223,10 +223,10 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	}
 	log.Printf("handleConnection: options received: %v", opt)
 
-	go serverReader(conn, opt, c, connections)
+	go serverReader(conn, opt, c, connections, isTLS)
 
 	if !opt.PassiveServer {
-		go serverWriter(conn, opt, c, connections)
+		go serverWriter(conn, opt, c, connections, isTLS)
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
@@ -239,8 +239,9 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-func serverReader(conn net.Conn, opt options, c, connections int) {
-	log.Printf("serverReader: starting: %v", conn.RemoteAddr())
+func serverReader(conn net.Conn, opt options, c, connections int, isTLS bool) {
+
+	log.Printf("serverReader: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
@@ -251,8 +252,16 @@ func serverReader(conn net.Conn, opt options, c, connections int) {
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriter(conn net.Conn, opt options, c, connections int) {
-	log.Printf("serverWriter: starting: %v", conn.RemoteAddr())
+func protoLabel(isTLS bool) string {
+	if isTLS {
+		return "TLS"
+	}
+	return "TCP"
+}
+
+func serverWriter(conn net.Conn, opt options, c, connections int, isTLS bool) {
+
+	log.Printf("serverWriter: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
@@ -264,7 +273,7 @@ func serverWriter(conn net.Conn, opt options, c, connections int) {
 }
 
 func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, c, connections int) {
-	log.Printf("serverWriterTo: starting: %v", dst)
+	log.Printf("serverWriterTo: starting: UDP %v", dst)
 
 	start := acc.prevTime
 
