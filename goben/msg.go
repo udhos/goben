@@ -33,7 +33,7 @@ func newAck() ack {
 // ackSend server sends
 func ackSend(udp bool, conn io.Writer, a ack) error {
 
-	// prevent sending back magic
+	// prevent sending wrong magic
 	if a.Magic != ackMagic {
 		m := fmt.Sprintf("ackSend: bad magic: expected=[%s] got=[%s]", ackMagic, a.Magic)
 		log.Print(m)
@@ -79,7 +79,7 @@ func ackRecv(udp bool, conn io.Reader, a *ack) error {
 		return errDec
 	}
 
-	// prevent receiving back magic
+	// prevent receiving wrong magic
 	if a.Magic != ackMagic {
 		m := fmt.Sprintf("ackRecv: bad magic: expected=[%s] got=[%s]", ackMagic, a.Magic)
 		log.Print(m)
