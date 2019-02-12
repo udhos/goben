@@ -125,13 +125,16 @@ func handleTCP(app *config, wg *sync.WaitGroup, listener net.Listener, isTLS boo
 
 	var id int
 
+	var aggReader aggregate
+	var aggWriter aggregate
+
 	for {
 		conn, errAccept := listener.Accept()
 		if errAccept != nil {
 			log.Printf("handle: accept: %v", errAccept)
 			break
 		}
-		go handleConnection(conn, id, 0, isTLS)
+		go handleConnection(conn, id, 0, isTLS, &aggReader, &aggWriter)
 		id++
 	}
 }
@@ -150,6 +153,9 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	tab := map[string]*udpInfo{}
 
 	buf := make([]byte, app.opt.ReadSize)
+
+	var aggReader aggregate
+	var aggWriter aggregate
 
 	var idCount int
 
@@ -184,7 +190,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 			if !info.opt.PassiveServer {
 				opt := info.opt // copy for gorouting
-				go serverWriterTo(conn, opt, src, info.acc, info.id, 0)
+				go serverWriterTo(conn, opt, src, info.acc, info.id, 0, &aggWriter)
 			}
 
 			continue
@@ -199,7 +205,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 		if time.Since(info.start) > info.opt.TotalDuration {
 			log.Printf("handleUDP: total duration %s timer: %s", info.opt.TotalDuration, src)
-			info.acc.average(info.start, connIndex, "handleUDP", "rcv/s")
+			info.acc.average(info.start, connIndex, "handleUDP", "rcv/s", &aggReader)
 			log.Printf("handleUDP: FIXME: remove idle udp entry from udp table")
 			continue
 		}
@@ -209,7 +215,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	}
 }
 
-func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
+func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	defer conn.Close()
 
 	log.Printf("handleConnection: incoming: %s %v", protoLabel(isTLS), conn.RemoteAddr())
@@ -230,10 +236,10 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 		return
 	}
 
-	go serverReader(conn, opt, c, connections, isTLS)
+	go serverReader(conn, opt, c, connections, isTLS, aggReader)
 
 	if !opt.PassiveServer {
-		go serverWriter(conn, opt, c, connections, isTLS)
+		go serverWriter(conn, opt, c, connections, isTLS, aggWriter)
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
@@ -246,7 +252,7 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool) {
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-func serverReader(conn net.Conn, opt options, c, connections int, isTLS bool) {
+func serverReader(conn net.Conn, opt options, c, connections int, isTLS bool, agg *aggregate) {
 
 	log.Printf("serverReader: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
@@ -254,7 +260,7 @@ func serverReader(conn net.Conn, opt options, c, connections int, isTLS bool) {
 
 	buf := make([]byte, opt.ReadSize)
 
-	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil)
+	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil, agg)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
@@ -266,7 +272,7 @@ func protoLabel(isTLS bool) string {
 	return "TCP"
 }
 
-func serverWriter(conn net.Conn, opt options, c, connections int, isTLS bool) {
+func serverWriter(conn net.Conn, opt options, c, connections int, isTLS bool, agg *aggregate) {
 
 	log.Printf("serverWriter: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
@@ -274,12 +280,12 @@ func serverWriter(conn net.Conn, opt options, c, connections int, isTLS bool) {
 
 	buf := randBuf(opt.WriteSize)
 
-	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil)
+	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, c, connections int) {
+func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, c, connections int, agg *aggregate) {
 	log.Printf("serverWriterTo: starting: UDP %v", dst)
 
 	start := acc.prevTime
@@ -296,7 +302,7 @@ func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, 
 
 	buf := randBuf(opt.WriteSize)
 
-	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil)
+	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 
 	log.Printf("serverWriterTo: exiting: %v", dst)
 }

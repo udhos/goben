@@ -25,6 +25,9 @@ func open(app *config) {
 
 	var wg sync.WaitGroup
 
+	var aggReader aggregate
+	var aggWriter aggregate
+
 	for _, h := range app.hosts {
 
 		hh := appendPortIfMissing(h, app.defaultPort)
@@ -38,7 +41,7 @@ func open(app *config) {
 				log.Printf("open: trying TLS")
 				conn, errDialTLS := tlsDial(proto, hh)
 				if errDialTLS == nil {
-					spawnClient(app, &wg, conn, i, app.connections, true)
+					spawnClient(app, &wg, conn, i, app.connections, true, &aggReader, &aggWriter)
 					continue
 				}
 				log.Printf("open: trying TLS: failure: %s: %s: %v", proto, hh, errDialTLS)
@@ -53,16 +56,19 @@ func open(app *config) {
 				log.Printf("open: dial %s: %s: %v", proto, hh, errDial)
 				continue
 			}
-			spawnClient(app, &wg, conn, i, app.connections, false)
+			spawnClient(app, &wg, conn, i, app.connections, false, &aggReader, &aggWriter)
 		}
 	}
 
 	wg.Wait()
+
+	log.Printf("aggregate reading: %d Mbps %d recv/s", aggReader.Mbps, aggReader.Cps)
+	log.Printf("aggregate writing: %d Mbps %d send/s", aggWriter.Mbps, aggWriter.Cps)
 }
 
-func spawnClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool) {
+func spawnClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	wg.Add(1)
-	go handleConnectionClient(app, wg, conn, c, connections, isTLS)
+	go handleConnectionClient(app, wg, conn, c, connections, isTLS, aggReader, aggWriter)
 }
 
 func tlsDial(proto, h string) (net.Conn, error) {
@@ -105,7 +111,7 @@ func sendOptions(app *config, conn io.Writer) error {
 	return nil
 }
 
-func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool) {
+func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	defer wg.Done()
 
 	log.Printf("handleConnectionClient: starting %s %d/%d %v", protoLabel(isTLS), c, connections, conn.RemoteAddr())
@@ -144,9 +150,9 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		output = &info.Output
 	}
 
-	go clientReader(conn, c, connections, doneReader, opt, input)
+	go clientReader(conn, c, connections, doneReader, opt, input, aggReader)
 	if !app.passiveClient {
-		go clientWriter(conn, c, connections, doneWriter, opt, output)
+		go clientWriter(conn, c, connections, doneWriter, opt, output, aggWriter)
 	}
 
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
@@ -195,28 +201,28 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
+func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
 	buf := make([]byte, opt.ReadSize)
 
-	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat)
+	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat, agg)
 
 	close(done)
 
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData) {
+func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
 	buf := randBuf(opt.WriteSize)
 
-	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat)
+	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat, agg)
 
 	close(done)
 
@@ -272,14 +278,25 @@ func (a *account) update(n int, reportInterval time.Duration, conn, label, cpsLa
 	}
 }
 
-func (a *account) average(start time.Time, conn, label, cpsLabel string) {
+type aggregate struct {
+	Mbps  int64 // Megabit/s
+	Cps   int64 // Call/s
+	mutex sync.Mutex
+}
+
+func (a *account) average(start time.Time, conn, label, cpsLabel string, agg *aggregate) {
 	elapSec := time.Since(start).Seconds()
 	mbps := int64(float64(8*a.size) / (1000000 * elapSec))
 	cps := int64(float64(a.calls) / elapSec)
 	log.Printf(fmtReport, conn, "average", label, mbps, cps, cpsLabel)
+
+	agg.mutex.Lock()
+	agg.Mbps += mbps
+	agg.Cps += cps
+	agg.mutex.Unlock()
 }
 
-func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval time.Duration, maxSpeed float64, stat *ChartData) {
+func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval time.Duration, maxSpeed float64, stat *ChartData, agg *aggregate) {
 
 	start := time.Now()
 	acc := &account{}
@@ -308,5 +325,5 @@ func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval t
 		acc.update(n, reportInterval, conn, label, cpsLabel, stat)
 	}
 
-	acc.average(start, conn, label, cpsLabel)
+	acc.average(start, conn, label, cpsLabel, agg)
 }

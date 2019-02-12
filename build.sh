@@ -2,7 +2,7 @@
 
 gofmt -s -w ./goben
 go tool fix ./goben
-go tool vet ./goben
+go vet ./goben
 
 #which gosimple >/dev/null && gosimple ./goben
 which golint >/dev/null && golint ./goben
