@@ -32,6 +32,7 @@ type config struct {
 	tlsCert        string
 	tlsKey         string
 	tls            bool
+	localAddr      string
 }
 
 func (h *hostList) String() string {
@@ -80,6 +81,7 @@ func main() {
 	flag.StringVar(&app.tlsKey, "key", "key.pem", "TLS key file")
 	flag.StringVar(&app.tlsCert, "cert", "cert.pem", "TLS cert file")
 	flag.BoolVar(&app.tls, "tls", true, "set to false to disable TLS")
+	flag.StringVar(&app.localAddr, "localAddr", "", "bind specific local address:port\nexample: -localAddr 127.0.0.1:2000")
 
 	flag.Parse()
 

@@ -28,6 +28,25 @@ func open(app *config) {
 	var aggReader aggregate
 	var aggWriter aggregate
 
+	dialer := net.Dialer{}
+
+	if app.localAddr != "" {
+		if app.udp {
+			addr, err := net.ResolveUDPAddr(proto, app.localAddr)
+			if err != nil {
+				log.Printf("open: resolve %s localAddr=%s: %v", proto, app.localAddr, err)
+			}
+			dialer.LocalAddr = addr
+		} else {
+			addr, err := net.ResolveTCPAddr(proto, app.localAddr)
+			if err != nil {
+				log.Printf("open: resolve %s localAddr=%s: %v", proto, app.localAddr, err)
+			}
+			dialer.LocalAddr = addr
+		}
+		log.Printf("open: localAddr: %s", dialer.LocalAddr)
+	}
+
 	for _, h := range app.hosts {
 
 		hh := appendPortIfMissing(h, app.defaultPort)
@@ -39,7 +58,7 @@ func open(app *config) {
 			if !app.udp && app.tls {
 				// try TLS first
 				log.Printf("open: trying TLS")
-				conn, errDialTLS := tlsDial(proto, hh)
+				conn, errDialTLS := tlsDial(dialer, proto, hh)
 				if errDialTLS == nil {
 					spawnClient(app, &wg, conn, i, app.connections, true, &aggReader, &aggWriter)
 					continue
@@ -51,7 +70,7 @@ func open(app *config) {
 				log.Printf("open: trying non-TLS TCP")
 			}
 
-			conn, errDial := net.Dial(proto, hh)
+			conn, errDial := dialer.Dial(proto, hh)
 			if errDial != nil {
 				log.Printf("open: dial %s: %s: %v", proto, hh, errDial)
 				continue
@@ -71,12 +90,12 @@ func spawnClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, connections 
 	go handleConnectionClient(app, wg, conn, c, connections, isTLS, aggReader, aggWriter)
 }
 
-func tlsDial(proto, h string) (net.Conn, error) {
+func tlsDial(dialer net.Dialer, proto, h string) (net.Conn, error) {
 	conf := &tls.Config{
 		InsecureSkipVerify: true,
 	}
 
-	conn, err := tls.Dial(proto, h, conf)
+	conn, err := tls.DialWithDialer(&dialer, proto, h, conf)
 
 	return conn, err
 }
