@@ -47,7 +47,7 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
     git clone https://github.com/udhos/goben ;# clone outside GOPATH
     cd goben
     go test ./goben
-    go install ./goben
+    CGO_ENABLED=0 go install ./goben
 
 ## Without Go Modules (before Go 1.11)
 
