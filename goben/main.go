@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const version = "0.4"
+const version = "0.5"
 
 type hostList []string
 
@@ -116,7 +116,7 @@ func main() {
 		app.listeners = []string{app.defaultPort}
 	}
 
-	log.Printf("goben version " + version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)))
+	log.Printf("goben version " + version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
 	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
 		app.connections, app.defaultPort, app.listeners, app.hosts)
 	log.Printf("reportInterval=%s totalDuration=%s", app.opt.ReportInterval, app.opt.TotalDuration)
