@@ -60,6 +60,8 @@ func badExportFilename(parameter, filename string) error {
 
 func main() {
 
+	log.Printf("goben version " + version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
+
 	app := config{}
 
 	flag.Var(&app.hosts, "hosts", "comma-separated list of hosts\nyou may append an optional port to every host: host[:port]")
@@ -118,7 +120,6 @@ func main() {
 		app.listeners = []string{app.defaultPort}
 	}
 
-	log.Printf("goben version " + version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
 	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
 		app.connections, app.defaultPort, app.listeners, app.hosts)
 	log.Printf("reportInterval=%s totalDuration=%s", app.opt.ReportInterval, app.opt.TotalDuration)

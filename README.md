@@ -74,9 +74,12 @@ Find several supported command-line switches by running 'goben -h':
 
 ```
 $ goben -h
+2021/02/28 00:43:28 goben version 0.6 runtime go1.16 GOMAXPROCS=12 OS=linux arch=amd64
 Usage of goben:
   -ascii
         plot ascii chart (default true)
+  -cert string
+        TLS cert file (default "cert.pem")
   -chart string
         output filename for rendering chart on client
         '%d' is parallel connection index to host
@@ -99,27 +102,38 @@ Usage of goben:
   -hosts value
         comma-separated list of hosts
         you may append an optional port to every host: host[:port]
+  -key string
+        TLS key file (default "key.pem")
   -listeners value
         comma-separated list of listen addresses
         you may prepend an optional host to every port: [host]:port
+  -localAddr string
+        bind specific local address:port
+        example: -localAddr 127.0.0.1:2000
   -maxSpeed float
         bandwidth limit in mbps (0 means unlimited)
   -passiveClient
         suppress client writes
   -passiveServer
         suppress server writes
-  -readSize int
-        read buffer size in bytes (default 50000)
   -reportInterval string
         periodic report interval
         unspecified time unit defaults to second (default "2s")
+  -tcpReadSize int
+        TCP read buffer size in bytes (default 1000000)
+  -tcpWriteSize int
+        TCP write buffer size in bytes (default 1000000)
+  -tls
+        set to false to disable TLS (default true)
   -totalDuration string
         test total duration
         unspecified time unit defaults to second (default "10s")
   -udp
         run client in UDP mode
-  -writeSize int
-        write buffer size in bytes (default 50000)
+  -udpReadSize int
+        UDP read buffer size in bytes (default 64000)
+  -udpWriteSize int
+        UDP write buffer size in bytes (default 64000)
 ```
 
 # Example
