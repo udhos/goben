@@ -12,8 +12,10 @@ import (
 type options struct {
 	ReportInterval time.Duration
 	TotalDuration  time.Duration
-	ReadSize       int
-	WriteSize      int
+	TCPReadSize    int
+	TCPWriteSize   int
+	UDPReadSize    int
+	UDPWriteSize   int
 	PassiveServer  bool              // suppress server send
 	MaxSpeed       float64           // mbps
 	Table          map[string]string // send optional information client->server

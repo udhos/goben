@@ -152,7 +152,7 @@ func handleUDP(app *config, wg *sync.WaitGroup, conn *net.UDPConn) {
 
 	tab := map[string]*udpInfo{}
 
-	buf := make([]byte, app.opt.ReadSize)
+	buf := make([]byte, app.opt.UDPReadSize)
 
 	var aggReader aggregate
 	var aggWriter aggregate
@@ -258,7 +258,7 @@ func serverReader(conn net.Conn, opt options, c, connections int, isTLS bool, ag
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := make([]byte, opt.ReadSize)
+	buf := make([]byte, opt.TCPReadSize)
 
 	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil, agg)
 
@@ -278,7 +278,7 @@ func serverWriter(conn net.Conn, opt options, c, connections int, isTLS bool, ag
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := randBuf(opt.WriteSize)
+	buf := randBuf(opt.TCPWriteSize)
 
 	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 
@@ -300,7 +300,7 @@ func serverWriterTo(conn *net.UDPConn, opt options, dst net.Addr, acc *account, 
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := randBuf(opt.WriteSize)
+	buf := randBuf(opt.UDPWriteSize)
 
 	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 

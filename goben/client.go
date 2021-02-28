@@ -170,9 +170,11 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		output = &info.Output
 	}
 
-	go clientReader(conn, c, connections, doneReader, opt, input, aggReader)
+	bufSizeIn, bufSizeOut := getBufSize(opt, app.udp)
+
+	go clientReader(conn, c, connections, doneReader, bufSizeIn, opt, input, aggReader)
 	if !app.passiveClient {
-		go clientWriter(conn, c, connections, doneWriter, opt, output, aggWriter)
+		go clientWriter(conn, c, connections, doneWriter, bufSizeOut, opt, output, aggWriter)
 	}
 
 	tickerPeriod := time.NewTimer(app.opt.TotalDuration)
@@ -222,12 +224,23 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData, agg *aggregate) {
+func getBufSize(opt options, isUDP bool) (bufSizeIn int, bufSizeOut int) {
+	if isUDP {
+		bufSizeIn = opt.UDPReadSize
+		bufSizeOut = opt.UDPWriteSize
+		return
+	}
+	bufSizeIn = opt.TCPReadSize
+	bufSizeOut = opt.TCPWriteSize
+	return
+}
+
+func clientReader(conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := make([]byte, opt.ReadSize)
+	buf := make([]byte, bufSize)
 
 	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat, agg)
 
@@ -236,12 +249,12 @@ func clientReader(conn net.Conn, c, connections int, done chan struct{}, opt opt
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn net.Conn, c, connections int, done chan struct{}, opt options, stat *ChartData, agg *aggregate) {
+func clientWriter(conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
-	buf := randBuf(opt.WriteSize)
+	buf := randBuf(bufSize)
 
 	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat, agg)
 
@@ -353,7 +366,6 @@ func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval t
 func formatAddress(con net.Conn) string {
 	if runtime.GOOS == "windows" {
 		return strings.Replace(fmt.Sprintf("%v", con.RemoteAddr()), ":", "-", 1)
-	} else {
-		return fmt.Sprintf("%v", con.RemoteAddr())
 	}
+	return fmt.Sprintf("%v", con.RemoteAddr())
 }
