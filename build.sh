@@ -1,12 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 
-gofmt -s -w ./goben
-go tool fix ./goben
-go vet ./goben
+go install golang.org/x/vuln/cmd/govulncheck@latest
 
-#which gosimple >/dev/null && gosimple ./goben
-which golint >/dev/null && golint ./goben
-#which staticcheck >/dev/null && staticcheck ./goben
+gofmt -s -w .
 
-go test ./goben
-CGO_ENABLED=0 go install -v ./goben
+revive ./...
+
+go mod tidy
+
+govulncheck ./...
+
+export CGO_ENABLED=1
+
+go test -race ./...
+
+export CGO_ENABLED=0
+
+go install ./...

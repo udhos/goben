@@ -1,3 +1,4 @@
+// This is the main package for the goben utility.
 package main
 
 import (
@@ -11,7 +12,7 @@ import (
 	"unicode"
 )
 
-const version = "0.7"
+const version = "0.7.0"
 
 type hostList []string
 
