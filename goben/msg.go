@@ -29,7 +29,13 @@ type ack struct {
 const ackMagic = "goben-ack"
 
 func newAck() ack {
-	return ack{Magic: ackMagic}
+	a := ack{
+		Magic: ackMagic,
+		Table: map[string]string{
+			"serverVersion": version,
+		},
+	}
+	return a
 }
 
 // ackSend server sends
@@ -86,6 +92,10 @@ func ackRecv(udp bool, conn io.Reader, a *ack) error {
 		m := fmt.Sprintf("ackRecv: bad magic: expected=[%s] got=[%s]", ackMagic, a.Magic)
 		log.Print(m)
 		return fmt.Errorf(m)
+	}
+
+	if serverVersion, ok := a.Table["serverVersion"]; ok {
+		log.Printf("serverVersion=%s", serverVersion)
 	}
 
 	return nil

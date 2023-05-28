@@ -229,6 +229,10 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, 
 	}
 	log.Printf("handleConnection: options received: %v", opt)
 
+	if clientVersion, ok := opt.Table["clientVersion"]; ok {
+		log.Printf("handleConnection: clientVersion=%s", clientVersion)
+	}
+
 	// send ack
 	a := newAck()
 	if errAck := ackSend(false, conn, a); errAck != nil {
