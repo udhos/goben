@@ -148,10 +148,11 @@ func main() {
 
 // append "s" (second) to time string
 func defaultTimeUnit(s string) string {
-	if len(s) < 1 {
+	if s == "" {
 		return s
 	}
 	if unicode.IsDigit(rune(s[len(s)-1])) {
+		// last rune is digit
 		return s + "s"
 	}
 	return s

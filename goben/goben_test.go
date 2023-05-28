@@ -29,3 +29,21 @@ func expectAppendPort(t *testing.T, host, port, wanted string) {
 			host, port, result, wanted)
 	}
 }
+
+func TestDefaultTimeUnit(t *testing.T) {
+	if defaultTimeUnit("") != "" {
+		t.Errorf("empty time unit should be preserved")
+	}
+	if defaultTimeUnit(" ") != " " {
+		t.Errorf("blank time unit should be preserved")
+	}
+	if defaultTimeUnit("10s") != "10s" {
+		t.Errorf("explicit seconds time unit should be preserved")
+	}
+	if defaultTimeUnit("10m") != "10m" {
+		t.Errorf("explicit minutes time unit should be preserved")
+	}
+	if defaultTimeUnit("10") != "10s" {
+		t.Errorf("implicit time unit should default to seconds")
+	}
+}
