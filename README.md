@@ -1,5 +1,6 @@
 [![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/udhos/goben/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/udhos/goben)](https://goreportcard.com/report/github.com/udhos/goben)
+[![Go Reference](https://pkg.go.dev/badge/github.com/udhos/goben.svg)](https://pkg.go.dev/github.com/udhos/goben)
 [![GolangCI](https://golangci.com/badges/github.com/udhos/goben.svg)](https://golangci.com/r/github.com/udhos/goben)
 
 # goben
