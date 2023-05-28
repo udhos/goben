@@ -224,7 +224,11 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, 
 	var opt options
 	dec := gob.NewDecoder(conn)
 	if errOpt := dec.Decode(&opt); errOpt != nil {
-		log.Printf("handleConnection: options failure: %v", errOpt)
+		if isTLS {
+			log.Printf("handleConnection: options failure: %v", errOpt)
+		} else {
+			log.Printf("handleConnection: options failure - it might be client attempting our (disabled) TLS first: %v", errOpt)
+		}
 		return
 	}
 	log.Printf("handleConnection: options received: %v", opt)
