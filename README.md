@@ -112,7 +112,7 @@ Usage of goben:
         bind specific local address:port
         example: -localAddr 127.0.0.1:2000
   -maxSpeed float
-        bandwidth limit in mbps (0 means unlimited)
+        bandwidth limit in Mbps (0 means unlimited)
   -passiveClient
         suppress client writes
   -passiveServer

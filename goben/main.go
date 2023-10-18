@@ -81,7 +81,7 @@ func main() {
 	flag.IntVar(&app.opt.UDPWriteSize, "udpWriteSize", 64000, "UDP write buffer size in bytes")
 	flag.BoolVar(&app.passiveClient, "passiveClient", false, "suppress client writes")
 	flag.BoolVar(&app.opt.PassiveServer, "passiveServer", false, "suppress server writes")
-	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
+	flag.Float64Var(&app.opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in Mbps (0 means unlimited)")
 	flag.BoolVar(&app.udp, "udp", false, "run client in UDP mode")
 	flag.StringVar(&app.chart, "chart", "", "output filename for rendering chart on client\n'%d' is parallel connection index to host\n'%s' is hostname:port\nexample: -chart chart-%d-%s.png")
 	flag.StringVar(&app.export, "export", "", "output filename for YAML exporting test results on client\n'%d' is parallel connection index to host\n'%s' is hostname:port\nexample: -export export-%d-%s.yaml")

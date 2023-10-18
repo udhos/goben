@@ -299,9 +299,9 @@ func (a *account) update(n int, reportInterval time.Duration, conn, label, cpsLa
 	elap := now.Sub(a.prevTime)
 	if elap > reportInterval {
 		elapSec := elap.Seconds()
-		mbps := float64(8*(a.size-a.prevSize)) / (1000000 * elapSec)
+		valMbps := float64(8*(a.size-a.prevSize)) / (1000000 * elapSec)
 		cps := int64(float64(a.calls-a.prevCalls) / elapSec)
-		log.Printf(fmtReport, conn, "report", label, int64(mbps), cps, cpsLabel)
+		log.Printf(fmtReport, conn, "report", label, int64(valMbps), cps, cpsLabel)
 		a.prevTime = now
 		a.prevSize = a.size
 		a.prevCalls = a.calls
@@ -309,7 +309,7 @@ func (a *account) update(n int, reportInterval time.Duration, conn, label, cpsLa
 		// save chart data
 		if stat != nil {
 			stat.XValues = append(stat.XValues, now)
-			stat.YValues = append(stat.YValues, mbps)
+			stat.YValues = append(stat.YValues, valMbps)
 		}
 	}
 }
@@ -322,12 +322,12 @@ type aggregate struct {
 
 func (a *account) average(start time.Time, conn, label, cpsLabel string, agg *aggregate) {
 	elapSec := time.Since(start).Seconds()
-	mbps := int64(float64(8*a.size) / (1000000 * elapSec))
+	valMbps := int64(float64(8*a.size) / (1000000 * elapSec))
 	cps := int64(float64(a.calls) / elapSec)
-	log.Printf(fmtReport, conn, "average", label, mbps, cps, cpsLabel)
+	log.Printf(fmtReport, conn, "average", label, valMbps, cps, cpsLabel)
 
 	agg.mutex.Lock()
-	agg.Mbps += mbps
+	agg.Mbps += valMbps
 	agg.Cps += cps
 	agg.mutex.Unlock()
 }
@@ -344,8 +344,8 @@ func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval t
 		if maxSpeed > 0 {
 			elapSec := time.Since(acc.prevTime).Seconds()
 			if elapSec > 0 {
-				mbps := float64(8*(acc.size-acc.prevSize)) / (1000000 * elapSec)
-				if mbps > maxSpeed {
+				valMbps := float64(8*(acc.size-acc.prevSize)) / (1000000 * elapSec)
+				if valMbps > maxSpeed {
 					time.Sleep(time.Millisecond)
 					continue
 				}
