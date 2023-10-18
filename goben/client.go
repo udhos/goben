@@ -219,7 +219,9 @@ func handleConnectionClient(app *config, wg *sync.WaitGroup, conn net.Conn, c, c
 		}
 	}
 
-	plotascii(&info, conn.RemoteAddr().String(), c)
+        if app.ascii {
+		plotascii(&info, conn.RemoteAddr().String(), c)
+        }
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }
