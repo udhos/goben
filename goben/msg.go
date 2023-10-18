@@ -17,7 +17,7 @@ type options struct {
 	UDPReadSize    int
 	UDPWriteSize   int
 	PassiveServer  bool              // suppress server send
-	MaxSpeed       float64           // mbps
+	MaxSpeed       float64           // Mbps
 	Table          map[string]string // send optional information client->server
 }
 
