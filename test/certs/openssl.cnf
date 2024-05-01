@@ -1,0 +1,31 @@
+[ req ]
+default_bits        = 2048
+default_md          = sha256
+prompt              = no
+distinguished_name  = dn
+req_extensions      = req_ext
+x509_extensions     = v3_ca
+
+[ dn ]
+C=AT
+ST=Vienna
+L=test
+O=test
+OU=test_ou
+CN=localhost
+
+[ req_ext ]
+subjectAltName = @alt_names
+basicConstraints = CA:FALSE
+
+[ v3_ca ]
+basicConstraints = CA:TRUE
+subjectAltName = @alt_names
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+issuerAltName          = issuer:copy
+
+[ alt_names ]
+DNS.1 = localhost
+#DNS.2 = your-server-hostname
+IP.1 = 127.0.0.1

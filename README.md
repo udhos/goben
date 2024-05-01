@@ -7,22 +7,24 @@
 
 goben is a golang tool to measure TCP/UDP transport layer throughput between hosts.
 
-* [Features](#features)
-* [History](#history)
-* [Requirements](#requirements)
-* [Install](#install)
-  * [With Go Modules (since Go 1\.11)](#with-go-modules-since-go-111)
-  * [Without Go Modules (before Go 1\.11)](#without-go-modules-before-go-111)
-* [Usage](#usage)
-* [Command\-line Options](#command-line-options)
-* [Example](#example)
-* [TLS](#tls)
+- [goben](#goben)
+- [Features](#features)
+- [History](#history)
+- [Requirements](#requirements)
+- [Install](#install)
+  - [Install with Go Modules (since Go 1.11)](#install-with-go-modules-since-go-111)
+  - [Run directly from source](#run-directly-from-source)
+- [Usage](#usage)
+- [Command-line Options](#command-line-options)
+- [Example](#example)
+- [TLS](#tls)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
 # Features
 
 - Support for TCP, UDP, TLS.
+  - TLS can be enforced by disabling TCP and UDP
 - Can limit maximum bandwidth.
 - Written in [Go](https://golang.org/). Single executable file. No runtime dependency.
 - Simple usage: start the server then launch the client pointing to server's address.
@@ -43,23 +45,20 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
 # Install
 
-## With Go Modules (since Go 1.11)
+## Install with Go Modules (since Go 1.11)
 
     git clone https://github.com/udhos/goben ;# clone outside GOPATH
     cd goben
-    go test ./goben
-    CGO_ENABLED=0 go install ./goben
+    go test -v ./...
+    CGO_ENABLED=0 go install ./cmd/goben
 
-## Without Go Modules (before Go 1.11)
+## Run directly from source
 
-    go get github.com/wcharczuk/go-chart
-    go get gopkg.in/yaml.v2
-    go get github.com/udhos/goben
-    go install github.com/udhos/goben/goben
+    go run ./cmd/goben
 
 # Usage
 
-Make sure ~/go/bin is in your shell PATH.
+Make sure ~/go/bin is in your shell PATH and goben has been installed.
 
 Start server:
 
@@ -79,6 +78,8 @@ $ goben -h
 Usage of goben:
   -ascii
         plot ascii chart (default true)
+  -ca string
+        TLS CA file (if server: CA to validate the client cert, if client: CA to validate the server cert) (default "ca.pem")
   -cert string
         TLS cert file (default "cert.pem")
   -chart string
@@ -120,12 +121,18 @@ Usage of goben:
   -reportInterval string
         periodic report interval
         unspecified time unit defaults to second (default "2s")
+  -tcp
+        set to false to disable TCP (this can be used to test TLS only or UDP only) (default true)
   -tcpReadSize int
         TCP read buffer size in bytes (default 1000000)
   -tcpWriteSize int
         TCP write buffer size in bytes (default 1000000)
   -tls
         set to false to disable TLS (default true)
+  -tlsAuthClient
+        set to true to enable client certificate authentication (check against CA) (default true)
+  -tlsAuthServer
+        set to true to enable server certificate authentication (check against CA) (default true)
   -totalDuration string
         test total duration
         unspecified time unit defaults to second (default "10s")
@@ -208,11 +215,14 @@ Client side:
 
 # TLS
 
-For TLS, a server-side certificate is required:
+For full a TLS setup please generate (all in PEM format):
+- a self-signed CA (specify -CA CLI option on server and client)
+  - you can have separate server and client CAs, for testing this is the same
+- a server certificate and key (specify -cert and -key CLI options)
+- a client certificate and key (specify -cert and -key CLI options)
 
-    $ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
-
-If the certificate is available, goben server listens on TLS socket. Otherwise, it falls back to plain TCP.
+You can use the minimal setup in the "certs" make target or look at the folder test/certs
+for a simple local testing setup that might be adapted for all kinds of use cases.
 
 --x--
 
