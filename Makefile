@@ -16,4 +16,12 @@ client: certs
 server: certs
 	go run ./cmd/goben/ -tls -key test/certs/ca.key -cert test/certs/ca.crt -listeners localhost:8443 -ca test/certs/ca.crt -tcp false -udp false
 
-.PHONY: test certs client server
+lint:
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/mgechev/revive@latest
+	go install golang.org/x/tools/cmd/deadcode@latest
+	revive ./...
+	govulncheck ./...
+	deadcode ./cmd/*
+
+.PHONY: test certs client server lint

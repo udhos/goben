@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// start a server with a given configuration
+// Serve starts a server with a given configuration.
 func Serve(app *Config, wg *sync.WaitGroup) bool {
 
 	// validate the config
@@ -99,9 +99,10 @@ func listenTCP(app *Config, wg *sync.WaitGroup, h string) bool {
 		}
 		spawnAcceptLoopTCP(wg, listener, false)
 		return true
-	} else {
-		log.Print("listenTCP: TCP disabled")
 	}
+
+	log.Print("listenTCP: TCP disabled")
+
 	return false
 }
 

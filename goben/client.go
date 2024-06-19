@@ -1,3 +1,4 @@
+// Package goben implements the library used by the goben tool.
 package goben
 
 import (
@@ -17,9 +18,7 @@ import (
 	"time"
 )
 
-type Client struct {
-}
-
+// ClientStats records stats for client side.
 type ClientStats struct {
 	TotalDuration time.Duration
 	ReadMbps      float64
@@ -28,7 +27,7 @@ type ClientStats struct {
 	WriteBytes    int64
 }
 
-// open a client with a config and perform a test
+// Open opens a client with a config and performs a test.
 func Open(app *Config) (ClientStats, error) {
 
 	// validate the config first
@@ -309,7 +308,9 @@ func handleConnectionClient(app *Config, wg *sync.WaitGroup, conn net.Conn, c, c
 		}
 	}
 
-	plotascii(&info, conn.RemoteAddr().String(), c)
+	if app.ASCII {
+		plotascii(&info, conn.RemoteAddr().String(), c)
+	}
 
 	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
 }

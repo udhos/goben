@@ -9,13 +9,13 @@ import (
 	"unicode"
 )
 
-// the current application version
+// Version is the current application version.
 const Version = "1.1.0"
 
-// a list of hosts to connect to or listen on
+// HostList holds a list of hosts to connect to or listen on.
 type HostList []string
 
-// config holds the configuration for the client and server
+// Config holds the configuration for the client and server.
 type Config struct {
 	Hosts          HostList
 	Listeners      HostList
@@ -40,6 +40,7 @@ type Config struct {
 	LocalAddr      string
 }
 
+// AssignFlags parses command line flags.
 func (app *Config) AssignFlags(flagset *flag.FlagSet) {
 	flagset.Var(&app.Hosts, "hosts", "comma-separated list of hosts\nyou may append an optional port to every host: host[:port]")
 	flagset.Var(&app.Listeners, "listeners", "comma-separated list of listen addresses\nyou may prepend an optional host to every port: [host]:port")
@@ -86,6 +87,7 @@ func (h *HostList) String() string {
 	return fmt.Sprint(*h)
 }
 
+// Set sets HostList value from a comma-separated list.
 func (h *HostList) Set(value string) error {
 	for _, hh := range strings.Split(value, ",") {
 		*h = append(*h, hh)
@@ -147,8 +149,8 @@ func ValidateAndUpdateConfig(app *Config) error {
 	return nil
 }
 
-// ValidateAndUpdateConfig validates and updates the config
-// it will set internal values necessary for successful completion
+// ValidateAndUpdateServerConfig validates and updates the config.
+// It will set internal values necessary for successful completion.
 func ValidateAndUpdateServerConfig(app *Config) error {
 	if len(app.Listeners) == 0 {
 		app.Listeners = []string{app.DefaultPort}

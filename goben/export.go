@@ -3,7 +3,7 @@ package goben
 import (
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func export(filename string, info *ExportInfo) error {

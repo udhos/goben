@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Options are sent to configure server behavior.
 type Options struct {
 	ReportInterval time.Duration
 	TotalDuration  time.Duration
@@ -76,7 +77,7 @@ func ackSend(udp bool, conn io.Writer, a ack) error {
 func ackRecv(udp bool, conn io.Reader, a *ack) error {
 
 	if udp {
-		m := fmt.Sprintf("ackRecv: UDP FIXME WRITEME")
+		const m = "ackRecv: UDP FIXME WRITEME"
 		log.Print(m)
 		return fmt.Errorf(m)
 	}

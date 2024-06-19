@@ -1,3 +1,4 @@
+// Package main implements the tool.
 package main
 
 import (
