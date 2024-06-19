@@ -1,4 +1,4 @@
-package main
+package goben
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type options struct {
+type Options struct {
 	ReportInterval time.Duration
 	TotalDuration  time.Duration
 	TCPReadSize    int
@@ -32,7 +32,7 @@ func newAck() ack {
 	a := ack{
 		Magic: ackMagic,
 		Table: map[string]string{
-			"serverVersion": version,
+			"serverVersion": Version,
 		},
 	}
 	return a
