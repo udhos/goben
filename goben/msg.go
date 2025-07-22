@@ -46,7 +46,7 @@ func ackSend(udp bool, conn io.Writer, a ack) error {
 	if a.Magic != ackMagic {
 		m := fmt.Sprintf("ackSend: bad magic: expected=[%s] got=[%s]", ackMagic, a.Magic)
 		log.Print(m)
-		return fmt.Errorf(m)
+		return fmt.Errorf("%s", m)
 	}
 
 	if udp {
@@ -92,7 +92,7 @@ func ackRecv(udp bool, conn io.Reader, a *ack) error {
 	if a.Magic != ackMagic {
 		m := fmt.Sprintf("ackRecv: bad magic: expected=[%s] got=[%s]", ackMagic, a.Magic)
 		log.Print(m)
-		return fmt.Errorf(m)
+		return fmt.Errorf("%s", m)
 	}
 
 	if serverVersion, ok := a.Table["serverVersion"]; ok {

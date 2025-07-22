@@ -19,7 +19,7 @@ func main() {
 	app.AssignFlags(flag.CommandLine)
 	flag.Parse()
 
-	log.Printf("goben version " + goben.Version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
+	log.Print("goben version " + goben.Version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
 	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
 		app.Connections, app.DefaultPort, app.Listeners, app.Hosts)
 	log.Printf("reportInterval=%s totalDuration=%s", app.Opt.ReportInterval, app.Opt.TotalDuration)
