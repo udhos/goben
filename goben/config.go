@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the current application version.
-const Version = "1.0.1"
+const Version = "1.0.2"
 
 // HostList holds a list of hosts to connect to or listen on.
 type HostList []string

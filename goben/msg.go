@@ -3,6 +3,7 @@ package goben
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -79,7 +80,7 @@ func ackRecv(udp bool, conn io.Reader, a *ack) error {
 	if udp {
 		const m = "ackRecv: UDP FIXME WRITEME"
 		log.Print(m)
-		return fmt.Errorf(m)
+		return errors.New(m)
 	}
 
 	dec := gob.NewDecoder(conn)
