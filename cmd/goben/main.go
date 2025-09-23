@@ -47,5 +47,7 @@ func main() {
 	}
 
 	log.Printf("client mode, %s protocol", proto)
-	goben.Open(&app)
+	if _, err := goben.Open(&app); err != nil {
+		log.Fatalf("Failed to open connection: %v", err)
+	}
 }
