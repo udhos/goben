@@ -84,7 +84,6 @@ func TestEndToEndTLS(t *testing.T) {
 	client.TLSCA = "../../test/certs/ca.crt"
 	client.TLSCert = "../../test/certs/client.crt"
 	client.TLSKey = "../../test/certs/client.key"
-	goben.ValidateAndUpdateConfig(client)
 	assert.NoError(t, goben.ValidateAndUpdateConfig(client))
 
 	// a server config

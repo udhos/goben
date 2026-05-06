@@ -79,7 +79,7 @@ func NewDefaultConfig() *Config {
 
 	flagSet := flag.FlagSet{}
 	result.AssignFlags(&flagSet)
-	flagSet.Parse([]string{})
+	_ = flagSet.Parse([]string{})
 	return &result
 }
 
