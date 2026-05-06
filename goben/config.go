@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the current application version.
-const Version = "1.0.2"
+const Version = "1.0.3"
 
 // HostList holds a list of hosts to connect to or listen on.
 type HostList []string
@@ -89,7 +89,7 @@ func (h *HostList) String() string {
 
 // Set sets HostList value from a comma-separated list.
 func (h *HostList) Set(value string) error {
-	for _, hh := range strings.Split(value, ",") {
+	for hh := range strings.SplitSeq(value, ",") {
 		*h = append(*h, hh)
 	}
 	return nil
