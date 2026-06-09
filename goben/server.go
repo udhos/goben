@@ -2,6 +2,7 @@ package goben
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
@@ -14,7 +15,7 @@ import (
 )
 
 // Serve starts a server with a given configuration.
-func Serve(app *Config, wg *sync.WaitGroup) bool {
+func Serve(ctx context.Context, app *Config, wg *sync.WaitGroup) bool {
 
 	// validate the config
 	if err := ValidateAndUpdateConfig(app); err != nil {
@@ -43,8 +44,8 @@ func Serve(app *Config, wg *sync.WaitGroup) bool {
 	successfulListeners := 0
 	for _, h := range app.Listeners {
 		hh := appendPortIfMissing(h, app.DefaultPort)
-		tcpSuccess := listenTCP(app, wg, hh)
-		udpSuccess := listenUDP(app, wg, hh)
+		tcpSuccess := listenTCP(ctx, app, wg, hh)
+		udpSuccess := listenUDP(ctx, app, wg, hh)
 		if tcpSuccess || udpSuccess {
 			successfulListeners++
 		}
@@ -65,14 +66,14 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func listenTCP(app *Config, wg *sync.WaitGroup, h string) bool {
+func listenTCP(ctx context.Context, app *Config, wg *sync.WaitGroup, h string) bool {
 
 	// first try TLS
 	if app.TLS {
 		log.Printf("listenTCP: spawning TLS listener: %s", h)
 		listener, errTLS := listenTLS(app, h)
 		if errTLS == nil {
-			spawnAcceptLoopTCP(wg, listener, true)
+			spawnAcceptLoopTCP(ctx, wg, listener, true)
 			return true
 		}
 		log.Printf("listenTLS: %v", errTLS)
@@ -97,7 +98,7 @@ func listenTCP(app *Config, wg *sync.WaitGroup, h string) bool {
 			log.Printf("listenTCP: TLS=%v %s: %v", app.TLS, h, errListen)
 			return false
 		}
-		spawnAcceptLoopTCP(wg, listener, false)
+		spawnAcceptLoopTCP(ctx, wg, listener, false)
 		return true
 	}
 
@@ -106,9 +107,9 @@ func listenTCP(app *Config, wg *sync.WaitGroup, h string) bool {
 	return false
 }
 
-func spawnAcceptLoopTCP(wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
+func spawnAcceptLoopTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	wg.Add(1)
-	go handleTCP(wg, listener, isTLS)
+	go handleTCP(ctx, wg, listener, isTLS)
 }
 
 func listenTLS(app *Config, h string) (net.Listener, error) {
@@ -149,7 +150,7 @@ func listenTLS(app *Config, h string) (net.Listener, error) {
 	return listener, errListen
 }
 
-func listenUDP(app *Config, wg *sync.WaitGroup, h string) bool {
+func listenUDP(ctx context.Context, app *Config, wg *sync.WaitGroup, h string) bool {
 	if app.UDP {
 		log.Printf("serve: spawning UDP listener: %s", h)
 
@@ -166,7 +167,7 @@ func listenUDP(app *Config, wg *sync.WaitGroup, h string) bool {
 		}
 
 		wg.Add(1)
-		go handleUDP(app, wg, conn)
+		go handleUDP(ctx, app, wg, conn)
 	} else {
 		log.Print("listenUDP: UDP disabled")
 		return false
@@ -195,8 +196,13 @@ LOOP:
 	return host + port
 }
 
-func handleTCP(wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
+func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	defer wg.Done()
+
+	go func() {
+		<-ctx.Done()
+		listener.Close()
+	}()
 
 	var id int
 
@@ -206,10 +212,16 @@ func handleTCP(wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	for {
 		conn, errAccept := listener.Accept()
 		if errAccept != nil {
-			log.Printf("handle: accept: %v", errAccept)
-			break
+			select {
+			case <-ctx.Done():
+				log.Printf("handleTCP: shutdown requested")
+				return
+			default:
+				log.Printf("handle: accept: %v", errAccept)
+				return
+			}
 		}
-		go handleConnection(conn, id, 0, isTLS, &aggReader, &aggWriter)
+		go handleConnection(ctx, conn, id, 0, isTLS, &aggReader, &aggWriter)
 		id++
 	}
 }
@@ -222,8 +234,13 @@ type udpInfo struct {
 	id     int
 }
 
-func handleUDP(app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
+func handleUDP(ctx context.Context, app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	defer wg.Done()
+
+	go func() {
+		<-ctx.Done()
+		conn.Close()
+	}()
 
 	tab := map[string]*udpInfo{}
 
@@ -237,8 +254,21 @@ func handleUDP(app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	for {
 		var info *udpInfo
 		n, src, errRead := conn.ReadFromUDP(buf)
+		if errRead != nil {
+			select {
+			case <-ctx.Done():
+				log.Printf("handleUDP: shutdown requested")
+				return
+			default:
+				if src == nil {
+					log.Printf("handleUDP: read nil src: error: %v", errRead)
+					continue
+				}
+				log.Printf("handleUDP: read error: %v", errRead)
+				continue
+			}
+		}
 		if src == nil {
-			log.Printf("handleUDP: read nil src: error: %v", errRead)
 			continue
 		}
 		var found bool
@@ -264,8 +294,8 @@ func handleUDP(app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
 			log.Printf("handleUDP: options received: %v", info.opt)
 
 			if !info.opt.PassiveServer {
-				opt := info.opt // copy for gorouting
-				go serverWriterTo(conn, opt, src, info.acc, info.id, 0, &aggWriter)
+				opt := info.opt
+				go serverWriterTo(ctx, conn, opt, src, info.acc, info.id, 0, &aggWriter)
 			}
 
 			continue
@@ -285,17 +315,15 @@ func handleUDP(app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
 			continue
 		}
 
-		// account read from UDP socket
 		info.acc.update(n, info.opt.ReportInterval, connIndex, "handleUDP", "rcv/s", nil, false)
 	}
 }
 
-func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
+func handleConnection(ctx context.Context, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	defer conn.Close()
 
 	log.Printf("handleConnection: incoming: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
-	// ensure the Handshake if this is a TLS connection
 	tlscon, ok := conn.(*tls.Conn)
 	if ok {
 		err := tlscon.Handshake()
@@ -314,7 +342,6 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, 
 		log.Print("handleConnection: not TLS")
 	}
 
-	// receive options
 	var opt Options
 	dec := gob.NewDecoder(conn)
 	if errOpt := dec.Decode(&opt); errOpt != nil {
@@ -331,30 +358,33 @@ func handleConnection(conn net.Conn, c, connections int, isTLS bool, aggReader, 
 		log.Printf("handleConnection: clientVersion=%s", clientVersion)
 	}
 
-	// send ack
 	a := newAck()
 	if errAck := ackSend(false, conn, a); errAck != nil {
 		log.Printf("handleConnection: sending ack: %v", errAck)
 		return
 	}
 
-	go serverReader(conn, opt, c, connections, isTLS, aggReader)
+	go serverReader(ctx, conn, opt, c, connections, isTLS, aggReader)
 
 	if !opt.PassiveServer {
-		go serverWriter(conn, opt, c, connections, isTLS, aggWriter)
+		go serverWriter(ctx, conn, opt, c, connections, isTLS, aggWriter)
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
 
-	<-tickerPeriod.C
-	log.Printf("handleConnection: %v timer", opt.TotalDuration)
+	select {
+	case <-tickerPeriod.C:
+		log.Printf("handleConnection: %v timer", opt.TotalDuration)
+	case <-ctx.Done():
+		log.Printf("handleConnection: received shutdown signal")
+	}
 
 	tickerPeriod.Stop()
 
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
 }
 
-func serverReader(conn net.Conn, opt Options, c, connections int, isTLS bool, agg *aggregate) {
+func serverReader(ctx context.Context, conn net.Conn, opt Options, c, connections int, isTLS bool, agg *aggregate) {
 
 	log.Printf("serverReader: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
@@ -362,7 +392,7 @@ func serverReader(conn net.Conn, opt Options, c, connections int, isTLS bool, ag
 
 	buf := make([]byte, opt.TCPReadSize)
 
-	workLoop(connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil, agg)
+	workLoop(ctx, connIndex, "serverReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, nil, agg)
 
 	log.Printf("serverReader: exiting: %v", conn.RemoteAddr())
 }
@@ -374,7 +404,7 @@ func protoLabel(isTLS bool) string {
 	return "TCP"
 }
 
-func serverWriter(conn net.Conn, opt Options, c, connections int, isTLS bool, agg *aggregate) {
+func serverWriter(ctx context.Context, conn net.Conn, opt Options, c, connections int, isTLS bool, agg *aggregate) {
 
 	log.Printf("serverWriter: starting: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
@@ -382,12 +412,12 @@ func serverWriter(conn net.Conn, opt Options, c, connections int, isTLS bool, ag
 
 	buf := randBuf(opt.TCPWriteSize)
 
-	workLoop(connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
+	workLoop(ctx, connIndex, "serverWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 
 	log.Printf("serverWriter: exiting: %v", conn.RemoteAddr())
 }
 
-func serverWriterTo(conn *net.UDPConn, opt Options, dst net.Addr, acc *account, c, connections int, agg *aggregate) {
+func serverWriterTo(ctx context.Context, conn *net.UDPConn, opt Options, dst net.Addr, acc *account, c, connections int, agg *aggregate) {
 	log.Printf("serverWriterTo: starting: UDP %v", dst)
 
 	start := acc.prevTime
@@ -404,7 +434,7 @@ func serverWriterTo(conn *net.UDPConn, opt Options, dst net.Addr, acc *account, 
 
 	buf := randBuf(opt.UDPWriteSize)
 
-	workLoop(connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
+	workLoop(ctx, connIndex, "serverWriterTo", "snd/s", udpWriteTo, buf, opt.ReportInterval, opt.MaxSpeed, nil, agg)
 
 	log.Printf("serverWriterTo: exiting: %v", dst)
 }

@@ -3,6 +3,7 @@ package goben
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -28,7 +29,7 @@ type ClientStats struct {
 }
 
 // Open opens a client with a config and performs a test.
-func Open(app *Config) (ClientStats, error) {
+func Open(ctx context.Context, app *Config) (ClientStats, error) {
 
 	// validate the config first
 	if err := ValidateAndUpdateConfig(app); err != nil {
@@ -81,7 +82,7 @@ func Open(app *Config) (ClientStats, error) {
 				log.Printf("open: trying TLS")
 				conn, errDialTLS := tlsDial(dialer, proto, hh, app)
 				if errDialTLS == nil {
-					spawnClient(app, &wg, conn, i, app.Connections, true, &aggReader, &aggWriter)
+					spawnClient(ctx, app, &wg, conn, i, app.Connections, true, &aggReader, &aggWriter)
 					successfulConnections++
 					continue
 				}
@@ -102,7 +103,7 @@ func Open(app *Config) (ClientStats, error) {
 					log.Printf("open: dial %s: %s: %v", proto, hh, errDial)
 					continue
 				}
-				spawnClient(app, &wg, conn, i, app.Connections, false, &aggReader, &aggWriter)
+				spawnClient(ctx, app, &wg, conn, i, app.Connections, false, &aggReader, &aggWriter)
 				successfulConnections++
 			}
 		}
@@ -127,9 +128,9 @@ func Open(app *Config) (ClientStats, error) {
 	}, nil
 }
 
-func spawnClient(app *Config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
+func spawnClient(ctx context.Context, app *Config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	wg.Add(1)
-	go handleConnectionClient(app, wg, conn, c, connections, isTLS, aggReader, aggWriter)
+	go handleConnectionClient(ctx, app, wg, conn, c, connections, isTLS, aggReader, aggWriter)
 }
 
 func tlsDial(dialer net.Dialer, proto, h string, app *Config) (net.Conn, error) {
@@ -220,20 +221,17 @@ func sendOptions(app *Config, conn io.Writer) error {
 	return nil
 }
 
-func handleConnectionClient(app *Config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
+func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
 	defer wg.Done()
 
 	log.Printf("handleConnectionClient: starting %s %d/%d %v", protoLabel(isTLS), c, connections, conn.RemoteAddr())
 
-	// send options
 	if errOpt := sendOptions(app, conn); errOpt != nil {
 		return
 	}
 	opt := app.Opt
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 
-	// receive ack
-	//log.Printf("handleConnectionClient: FIXME WRITEME server does not send ack for UDP")
 	if !app.UDP {
 		var a ack
 		if errAck := ackRecv(app.UDP, conn, &a); errAck != nil {
@@ -261,23 +259,27 @@ func handleConnectionClient(app *Config, wg *sync.WaitGroup, conn net.Conn, c, c
 
 	bufSizeIn, bufSizeOut := getBufSize(opt, app.UDP)
 
-	go clientReader(conn, c, connections, doneReader, bufSizeIn, opt, input, aggReader)
+	go clientReader(ctx, conn, c, connections, doneReader, bufSizeIn, opt, input, aggReader)
 	if !app.PassiveClient {
-		go clientWriter(conn, c, connections, doneWriter, bufSizeOut, opt, output, aggWriter)
+		go clientWriter(ctx, conn, c, connections, doneWriter, bufSizeOut, opt, output, aggWriter)
 	}
 
 	tickerPeriod := time.NewTimer(app.Opt.TotalDuration)
 
-	<-tickerPeriod.C
-	log.Printf("handleConnectionClient: %v timer", app.Opt.TotalDuration)
+	select {
+	case <-tickerPeriod.C:
+		log.Printf("handleConnectionClient: %v timer", app.Opt.TotalDuration)
+	case <-ctx.Done():
+		log.Printf("handleConnectionClient: received shutdown signal")
+	}
 
 	tickerPeriod.Stop()
 
-	conn.Close() // force reader/writer to quit
+	conn.Close()
 
-	<-doneReader // wait reader exit
+	<-doneReader
 	if !app.PassiveClient {
-		<-doneWriter // wait writer exit
+		<-doneWriter
 	}
 
 	if app.CSV != "" {
@@ -326,28 +328,28 @@ func getBufSize(opt Options, isUDP bool) (bufSizeIn int, bufSizeOut int) {
 	return
 }
 
-func clientReader(conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt Options, stat *ChartData, agg *aggregate) {
+func clientReader(ctx context.Context, conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt Options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientReader: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
 	buf := make([]byte, bufSize)
 
-	workLoop(connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat, agg)
+	workLoop(ctx, connIndex, "clientReader", "rcv/s", conn.Read, buf, opt.ReportInterval, 0, stat, agg)
 
 	close(done)
 
 	log.Printf("clientReader: exiting: %d/%d %v", c, connections, conn.RemoteAddr())
 }
 
-func clientWriter(conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt Options, stat *ChartData, agg *aggregate) {
+func clientWriter(ctx context.Context, conn net.Conn, c, connections int, done chan struct{}, bufSize int, opt Options, stat *ChartData, agg *aggregate) {
 	log.Printf("clientWriter: starting: %d/%d %v", c, connections, conn.RemoteAddr())
 
 	connIndex := fmt.Sprintf("%d/%d", c, connections)
 
 	buf := randBuf(bufSize)
 
-	workLoop(connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat, agg)
+	workLoop(ctx, connIndex, "clientWriter", "snd/s", conn.Write, buf, opt.ReportInterval, opt.MaxSpeed, stat, agg)
 
 	close(done)
 
@@ -423,13 +425,22 @@ func (a *account) average(start time.Time, conn, label, cpsLabel string, agg *ag
 	agg.mutex.Unlock()
 }
 
-func workLoop(conn, label, cpsLabel string, f call, buf []byte, reportInterval time.Duration, maxSpeed float64, stat *ChartData, agg *aggregate) {
+func workLoop(ctx context.Context, conn, label, cpsLabel string, f call, buf []byte, reportInterval time.Duration, maxSpeed float64, stat *ChartData, agg *aggregate) {
 
 	start := time.Now()
 	acc := &account{}
 	acc.prevTime = start
 
 	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("workLoop: %s %s: shutdown requested", conn, label)
+			acc.update(0, reportInterval, conn, label, cpsLabel, stat, true)
+			acc.average(start, conn, label, cpsLabel, agg)
+			return
+		default:
+		}
+
 		runtime.Gosched()
 
 		if maxSpeed > 0 {

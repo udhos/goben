@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func TestInvalidConfig(t *testing.T) {
 	assert.Equal(t, nil, goben.ValidateAndUpdateConfig(client))
 
 	// launch client (this will fail)
-	_, err := goben.Open(client)
+	_, err := goben.Open(context.Background(), client)
 	assert.Error(t, err)
 }
 
@@ -56,11 +57,11 @@ func TestEndToEndInvalidTLSConfig(t *testing.T) {
 	// launch server
 	var wg sync.WaitGroup
 	wg.Add(1)
-	listenSuccess := goben.Serve(server, &wg)
+	listenSuccess := goben.Serve(context.Background(), server, &wg)
 	assert.False(t, listenSuccess)
 
 	// launch client
-	clientStats, err := goben.Open(client)
+	clientStats, err := goben.Open(context.Background(), client)
 	assert.Error(t, err)
 	assert.Equal(t, clientStats.TotalDuration, time.Duration(0*time.Second))
 	assert.Equal(t, clientStats.ReadMbps, float64(0))
@@ -100,13 +101,13 @@ func TestEndToEndTLS(t *testing.T) {
 	// launch server
 	var wg sync.WaitGroup
 	wg.Add(1)
-	listenSuccess := goben.Serve(server, &wg)
+	listenSuccess := goben.Serve(context.Background(), server, &wg)
 	if !listenSuccess {
 		t.Error("server failed to listen")
 	}
 
 	// launch client
-	clientStats, err := goben.Open(client)
+	clientStats, err := goben.Open(context.Background(), client)
 	assert.NoError(t, err)
 	assert.Equal(t, clientStats.TotalDuration, time.Duration(2*time.Second))
 	assert.Greater(t, clientStats.ReadMbps, float64(100))
@@ -138,13 +139,13 @@ func TestEndToEndTCP(t *testing.T) {
 	// launch server
 	var wg sync.WaitGroup
 	wg.Add(1)
-	listenSuccess := goben.Serve(server, &wg)
+	listenSuccess := goben.Serve(context.Background(), server, &wg)
 	if !listenSuccess {
 		t.Error("server failed to listen")
 	}
 
 	// launch client
-	clientStats, err := goben.Open(client)
+	clientStats, err := goben.Open(context.Background(), client)
 	assert.NoError(t, err)
 	assert.Equal(t, clientStats.TotalDuration, time.Duration(2*time.Second))
 	assert.Greater(t, clientStats.ReadMbps, float64(100))
@@ -176,13 +177,13 @@ func TestEndToEndTCPFallback(t *testing.T) {
 	// launch server
 	var wg sync.WaitGroup
 	wg.Add(1)
-	listenSuccess := goben.Serve(server, &wg)
+	listenSuccess := goben.Serve(context.Background(), server, &wg)
 	if !listenSuccess {
 		t.Error("server failed to listen")
 	}
 
 	// launch client
-	clientStats, err := goben.Open(client)
+	clientStats, err := goben.Open(context.Background(), client)
 	assert.NoError(t, err)
 	assert.Equal(t, clientStats.TotalDuration, time.Duration(2*time.Second))
 	assert.Greater(t, clientStats.ReadMbps, float64(100))
