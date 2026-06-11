@@ -254,7 +254,7 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 	var input *ChartData
 	var output *ChartData
 
-	if app.CSV != "" || app.Export != "" || app.Chart != "" || app.ASCII {
+	if app.ExportMode > 0 {
 		input = &info.Input
 		output = &info.Output
 	}
@@ -284,9 +284,8 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 		<-doneWriter
 	}
 
-	if app.CSV != "" {
-
-		filename := fmt.Sprintf(app.CSV, c, formatAddress(conn))
+	if app.ExportMode == ExportCSV && app.ExportFile != "" {
+		filename := fmt.Sprintf(app.ExportFile, c, formatAddress(conn))
 		log.Printf("exporting CSV test results to: %s", filename)
 		errExport := exportCsv(filename, &info)
 		if errExport != nil {
@@ -294,8 +293,8 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 		}
 	}
 
-	if app.Export != "" {
-		filename := fmt.Sprintf(app.Export, c, formatAddress(conn))
+	if app.ExportMode == ExportYAML && app.ExportFile != "" {
+		filename := fmt.Sprintf(app.ExportFile, c, formatAddress(conn))
 		log.Printf("exporting YAML test results to: %s", filename)
 		errExport := export(filename, &info)
 		if errExport != nil {
@@ -303,8 +302,8 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 		}
 	}
 
-	if app.Chart != "" {
-		filename := fmt.Sprintf(app.Chart, c, formatAddress(conn))
+	if app.ExportMode == ExportPNG && app.ExportFile != "" {
+		filename := fmt.Sprintf(app.ExportFile, c, formatAddress(conn))
 		log.Printf("rendering chart to: %s", filename)
 		errRender := chartRender(filename, &info.Input, &info.Output)
 		if errRender != nil {
@@ -312,7 +311,7 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 		}
 	}
 
-	if app.ASCII {
+	if app.ExportMode == ExportASCII {
 		plotascii(&info, conn.RemoteAddr().String(), c)
 	}
 

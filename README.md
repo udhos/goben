@@ -66,7 +66,7 @@ Start server:
 
 Start client:
 
-    client$ goben -hosts 1.1.1.1 ;# 1.1.1.1 is server's address
+    client$ goben -H 1.1.1.1 ;# 1.1.1.1 is server's address
 
 # Command-line Options
 
@@ -74,74 +74,36 @@ Find several supported command-line switches by running 'goben -h':
 
 ```
 $ goben -h
-2021/02/28 00:43:28 goben version 0.6 runtime go1.16 GOMAXPROCS=12 OS=linux arch=amd64
 Usage of goben:
-  -ascii
-        plot ascii chart (default true)
-  -ca string
-        TLS CA file (if server: CA to validate the client cert, if client: CA to validate the server cert) (default "ca.pem")
-  -cert string
-        TLS cert file (default "cert.pem")
-  -chart string
-        output filename for rendering chart on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -chart chart-%d-%s.png
-  -connections int
-        number of parallel connections (default 1)
-  -csv string
-        output filename for CSV exporting test results on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -csv export-%d-%s.csv
-  -defaultPort string
-        default port (default ":8080")
-  -export string
-        output filename for YAML exporting test results on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -export export-%d-%s.yaml
-  -hosts value
-        comma-separated list of hosts
-        you may append an optional port to every host: host[:port]
-  -key string
-        TLS key file (default "key.pem")
-  -listeners value
-        comma-separated list of listen addresses
-        you may prepend an optional host to every port: [host]:port
-  -localAddr string
-        bind specific local address:port
-        example: -localAddr 127.0.0.1:2000
-  -maxSpeed float
-        bandwidth limit in mbps (0 means unlimited)
-  -passiveClient
-        suppress client writes
-  -passiveServer
-        suppress server writes
-  -reportInterval string
-        periodic report interval
-        unspecified time unit defaults to second (default "2s")
-  -tcp
-        set to false to disable TCP (this can be used to test TLS only or UDP only) (default true)
-  -tcpReadSize int
-        TCP read buffer size in bytes (default 1000000)
-  -tcpWriteSize int
-        TCP write buffer size in bytes (default 1000000)
-  -tls
-        set to false to disable TLS (default true)
-  -tlsAuthClient
-        set to true to enable client certificate authentication (check against CA) (default true)
-  -tlsAuthServer
-        set to true to enable server certificate authentication (check against CA) (default true)
-  -totalDuration string
-        test total duration
-        unspecified time unit defaults to second (default "10s")
-  -udp
-        run client in UDP mode
-  -udpReadSize int
-        UDP read buffer size in bytes (default 64000)
-  -udpWriteSize int
-        UDP write buffer size in bytes (default 64000)
+      --ca string               TLS CA certificate file for peer verification (PEM format) (default "ca.pem")
+      --cert string             TLS certificate file (PEM format) (default "cert.pem")
+  -c, --connections int         number of parallel connections to each host (default 1)
+  -p, --defaultPort int         default port, automatically appended to hosts without explicit port (default 8080)
+  -e, --export int              export mode: 1=ASCII (default), 2=CSV, 3=YAML, 4=PNG (default 1)
+      --exportFile string       output filename for CSV/YAML/PNG export (supports %d=connIndex, %s=host)
+  -H, --hosts strings           comma-separated list of target hosts for client mode
+                                format: host[:port] (port defaults to --defaultPort)
+      --key string              TLS private key file (PEM format) (default "key.pem")
+  -l, --listeners strings       comma-separated list of listen addresses for server mode
+                                format: [host]:port
+  -a, --localAddr string        bind specific local address:port
+                                example: --localAddr 127.0.0.1:2000
+  -m, --maxSpeed float          bandwidth limit in Mbps (0 means unlimited)
+      --passiveClient           suppress client traffic (receive only)
+      --passiveServer           suppress server traffic (receive only)
+  -i, --reportInterval string   periodic throughput report interval
+                                unspecified time unit defaults to second (default "2s")
+  -t, --tcp                     enable TCP transport (disable to test TLS-only or UDP-only) (default true)
+      --tcpReadSize int         TCP read buffer size in bytes (default 1000000)
+      --tcpWriteSize int        TCP write buffer size in bytes (default 1000000)
+  -s, --tls                     enable TLS encryption (default true)
+      --tlsAuthClient           enable mutual TLS: verify server certificate against CA (default true)
+      --tlsAuthServer           enable mutual TLS: verify client certificate against CA (default true)
+  -d, --totalDuration string    total test duration
+                                unspecified time unit defaults to second (default "10s")
+  -u, --udp                     use UDP protocol instead of TCP
+      --udpReadSize int         UDP read buffer size in bytes (default 64000)
+      --udpWriteSize int        UDP write buffer size in bytes (default 64000)
 ```
 
 # Example
@@ -149,20 +111,32 @@ Usage of goben:
 Server side:
 
     $ goben
-    2018/06/28 15:04:26 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
-    2018/06/28 15:04:26 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
-    2018/06/28 15:04:26 reportInterval=2s totalDuration=10s
-    2018/06/28 15:04:26 server mode (use -hosts to switch to client mode)
-    2018/06/28 15:04:26 serve: spawning TCP listener: :8080
-    2018/06/28 15:04:26 serve: spawning UDP listener: :8080
+    2026/06/10 01:49:33 goben version 1.0.3 runtime go1.26.2 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/10 01:49:33 connections=1 defaultPort=8080 listeners=[] hosts=[]
+    2026/06/10 01:49:33 reportInterval=0s totalDuration=0s
+    2026/06/10 01:49:33 server mode (use --hosts to switch to client mode)
+    2026/06/10 01:49:33 listenTCP: TLS disabled
+    2026/06/10 01:49:33 listenTCP: spawning TLS listener: :8080
+    2026/06/10 01:49:33 listenUDP: UDP disabled
 
 Client side:
 
-    $ goben -hosts localhost
-    2018/06/28 15:04:28 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
-    2018/06/28 15:04:28 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
-    2018/06/28 15:04:28 reportInterval=2s totalDuration=10s
-    2018/06/28 15:04:28 client mode, tcp protocol
+    $ goben -H 127.0.0.1
+    2026/06/10 01:49:34 goben version 1.0.3 runtime go1.26.2 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/10 01:49:34 connections=1 defaultPort=8080 listeners=[] hosts=["127.0.0.1"]
+    2026/06/10 01:49:34 reportInterval=0s totalDuration=0s
+    2026/06/10 01:49:34 client mode, tcp protocol
+    2026/06/10 01:49:34 open: opening TLS=false tcp 0/1: 127.0.0.1:8080
+    2026/06/10 01:49:34 open: trying non-TLS TCP
+    2026/06/10 01:49:34 handleConnectionClient: starting TCP 0/1 127.0.0.1:8080
+    2026/06/10 01:49:34 handleConnectionClient: options sent: {1s 2s 1000000 1000000 64000 64000 false 0 map[]}
+    2026/06/10 01:49:34 serverVersion=1.0.3
+    2026/06/10 01:49:34 handleConnectionClient: TCP ack received
+    2026/06/10 01:49:34 clientWriter: starting: 0/1 127.0.0.1:8080
+    2026/06/10 01:49:34 clientReader: starting: 0/1 127.0.0.1:8080
+    2026/06/10 01:49:35 0/1  report   clientReader rate: 21994.914328 Mbps   3732 rcv/s
+    2026/06/10 01:49:35 0/1  report   clientWriter rate: 21881.352904 Mbps   2735 snd/s
+    2026/06/10 01:49:36 handleConnectionClient: 2s timer
     2018/06/28 15:04:28 open: opening tcp 0/1: localhost:8080
     2018/06/28 15:04:28 handleConnectionClient: starting 0/1 [::1]:8080
     2018/06/28 15:04:28 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}

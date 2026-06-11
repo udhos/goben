@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/spf13/pflag"
+
 	"github.com/udhos/goben/goben"
 )
 
@@ -19,8 +20,8 @@ func main() {
 
 	app := goben.Config{}
 
-	app.AssignFlags(flag.CommandLine)
-	flag.Parse()
+	app.AssignFlags(pflag.CommandLine)
+	pflag.Parse()
 
 	log.Print("goben version " + goben.Version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
 	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",

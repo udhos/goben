@@ -1,12 +1,13 @@
 package goben
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/spf13/pflag"
 )
 
 // Version is the current application version.
@@ -14,6 +15,15 @@ const Version = "1.1.0"
 
 // HostList holds a list of hosts to connect to or listen on.
 type HostList []string
+
+// Export modes
+const (
+	ExportNone  = 0
+	ExportASCII = 1
+	ExportCSV   = 2
+	ExportYAML  = 3
+	ExportPNG   = 4
+)
 
 // Config holds the configuration for the client and server.
 type Config struct {
@@ -24,12 +34,10 @@ type Config struct {
 	ReportInterval string
 	TotalDuration  string
 	Opt            Options
-	PassiveClient  bool // suppress client send
+	PassiveClient  bool
 	UDP            bool
-	Chart          string
-	Export         string
-	CSV            string
-	ASCII          bool // plot ascii chart
+	ExportMode     int
+	ExportFile     string
 	TLSCert        string
 	TLSKey         string
 	TLSCA          string
@@ -41,33 +49,31 @@ type Config struct {
 }
 
 // AssignFlags parses command line flags.
-func (app *Config) AssignFlags(flagset *flag.FlagSet) {
-	flagset.Var(&app.Hosts, "hosts", "comma-separated list of hosts\nyou may append an optional port to every host: host[:port]")
-	flagset.Var(&app.Listeners, "listeners", "comma-separated list of listen addresses\nyou may prepend an optional host to every port: [host]:port")
-	flagset.StringVar(&app.DefaultPort, "defaultPort", ":8080", "default port")
-	flagset.IntVar(&app.Connections, "connections", 1, "number of parallel connections")
-	flagset.StringVar(&app.ReportInterval, "reportInterval", "2s", "periodic report interval\nunspecified time unit defaults to second")
-	flagset.StringVar(&app.TotalDuration, "totalDuration", "10s", "test total duration\nunspecified time unit defaults to second")
+func (app *Config) AssignFlags(flagset *pflag.FlagSet) {
+	flagset.VarP(&app.Hosts, "hosts", "H", "comma-separated list of target hosts for client mode\nformat: host[:port] (port defaults to --defaultPort)")
+	flagset.VarP(&app.Listeners, "listeners", "l", "comma-separated list of listen addresses for server mode\nformat: [host]:port")
+	flagset.StringVarP(&app.DefaultPort, "defaultPort", "p", ":8080", "default port, automatically appended to hosts without explicit port")
+	flagset.IntVarP(&app.Connections, "connections", "c", 1, "number of parallel connections to each host")
+	flagset.StringVarP(&app.ReportInterval, "reportInterval", "i", "2s", "periodic throughput report interval\nunspecified time unit defaults to second")
+	flagset.StringVarP(&app.TotalDuration, "totalDuration", "d", "10s", "total test duration\nunspecified time unit defaults to second")
 	flagset.IntVar(&app.Opt.TCPReadSize, "tcpReadSize", 1000000, "TCP read buffer size in bytes")
 	flagset.IntVar(&app.Opt.TCPWriteSize, "tcpWriteSize", 1000000, "TCP write buffer size in bytes")
 	flagset.IntVar(&app.Opt.UDPReadSize, "udpReadSize", 64000, "UDP read buffer size in bytes")
 	flagset.IntVar(&app.Opt.UDPWriteSize, "udpWriteSize", 64000, "UDP write buffer size in bytes")
-	flagset.BoolVar(&app.PassiveClient, "passiveClient", false, "suppress client writes")
-	flagset.BoolVar(&app.Opt.PassiveServer, "passiveServer", false, "suppress server writes")
-	flagset.Float64Var(&app.Opt.MaxSpeed, "maxSpeed", 0, "bandwidth limit in mbps (0 means unlimited)")
-	flagset.BoolVar(&app.UDP, "udp", false, "run client in UDP mode")
-	flagset.StringVar(&app.Chart, "chart", "", "output filename for rendering chart on client\n'%d' is parallel connection index to host\n'%s' is hostname:port\nexample: -chart chart-%d-%s.png")
-	flagset.StringVar(&app.Export, "export", "", "output filename for YAML exporting test results on client\n'%d' is parallel connection index to host\n'%s' is hostname:port\nexample: -export export-%d-%s.yaml")
-	flagset.StringVar(&app.CSV, "csv", "", "output filename for CSV exporting test results on client\n'%d' is parallel connection index to host\n'%s' is hostname:port\nexample: -csv export-%d-%s.csv")
-	flagset.BoolVar(&app.ASCII, "ascii", true, "plot ascii chart")
-	flagset.StringVar(&app.TLSKey, "key", "key.pem", "TLS key file")
-	flagset.StringVar(&app.TLSCert, "cert", "cert.pem", "TLS cert file")
-	flagset.StringVar(&app.TLSCA, "ca", "ca.pem", "TLS CA file (if server: CA to validate the client cert, if client: CA to validate the server cert)")
-	flagset.BoolVar(&app.TLS, "tls", true, "set to false to disable TLS")
-	flagset.BoolVar(&app.TLSAuthClient, "tlsAuthClient", true, "set to true to enable client certificate authentication (check against CA)")
-	flagset.BoolVar(&app.TLSAuthServer, "tlsAuthServer", true, "set to true to enable server certificate authentication (check against CA)")
-	flagset.BoolVar(&app.TCP, "tcp", true, "set to false to disable TCP (this can be used to test TLS only or UDP only)")
-	flagset.StringVar(&app.LocalAddr, "localAddr", "", "bind specific local address:port\nexample: -localAddr 127.0.0.1:2000")
+	flagset.BoolVar(&app.PassiveClient, "passiveClient", false, "suppress client traffic (receive only)")
+	flagset.BoolVar(&app.Opt.PassiveServer, "passiveServer", false, "suppress server traffic (receive only)")
+	flagset.Float64VarP(&app.Opt.MaxSpeed, "maxSpeed", "m", 0, "bandwidth limit in Mbps (0 means unlimited)")
+	flagset.BoolVarP(&app.UDP, "udp", "u", false, "use UDP protocol instead of TCP")
+	flagset.IntVarP(&app.ExportMode, "export", "e", ExportNone, "export mode: 0=none, 1=ASCII, 2=CSV, 3=YAML, 4=PNG")
+	flagset.StringVar(&app.ExportFile, "exportFile", "", "output filename for CSV/YAML/PNG export (supports %d=connIndex, %s=host)")
+	flagset.StringVar(&app.TLSKey, "key", "key.pem", "TLS private key file (PEM format)")
+	flagset.StringVar(&app.TLSCert, "cert", "cert.pem", "TLS certificate file (PEM format)")
+	flagset.StringVar(&app.TLSCA, "ca", "ca.pem", "TLS CA certificate file for peer verification (PEM format)")
+	flagset.BoolVarP(&app.TLS, "tls", "s", true, "enable TLS encryption")
+	flagset.BoolVar(&app.TLSAuthClient, "tlsAuthClient", true, "enable mutual TLS: verify server certificate against CA")
+	flagset.BoolVar(&app.TLSAuthServer, "tlsAuthServer", true, "enable mutual TLS: verify client certificate against CA")
+	flagset.BoolVarP(&app.TCP, "tcp", "t", true, "enable TCP transport (disable to test TLS-only or UDP-only)")
+	flagset.StringVarP(&app.LocalAddr, "localAddr", "a", "", "bind specific local address:port\nexample: --localAddr 127.0.0.1:2000")
 }
 
 // NewDefaultConfig creates a config with default values
@@ -77,14 +83,14 @@ func NewDefaultConfig() *Config {
 		"clientVersion": Version,
 	}
 
-	flagSet := flag.FlagSet{}
-	result.AssignFlags(&flagSet)
+	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
+	result.AssignFlags(flagSet)
 	_ = flagSet.Parse([]string{})
 	return &result
 }
 
 func (h *HostList) String() string {
-	return fmt.Sprint(*h)
+	return strings.Join(*h, ",")
 }
 
 // Set sets HostList value from a comma-separated list.
@@ -93,6 +99,11 @@ func (h *HostList) Set(value string) error {
 		*h = append(*h, hh)
 	}
 	return nil
+}
+
+// Type returns the type name for pflag display.
+func (h *HostList) Type() string {
+	return "strings"
 }
 
 func badExportFilename(parameter, filename string) error {
@@ -110,19 +121,16 @@ func badExportFilename(parameter, filename string) error {
 // ValidateAndUpdateConfig validates and updates the config
 // it will set internal values necessary for successful completion
 func ValidateAndUpdateConfig(app *Config) error {
-	if errChart := badExportFilename("-chart", app.Chart); errChart != nil {
-		log.Printf("%s", errChart.Error())
-		return errChart
+	if app.ExportMode < ExportNone || app.ExportMode > ExportPNG {
+		return fmt.Errorf("invalid export mode %d: must be %d (none), %d (ASCII), %d (CSV), %d (YAML), or %d (PNG)",
+			app.ExportMode, ExportNone, ExportASCII, ExportCSV, ExportYAML, ExportPNG)
 	}
 
-	if errExport := badExportFilename("-export", app.Export); errExport != nil {
-		log.Printf("%s", errExport.Error())
-		return errExport
-	}
-
-	if errCsv := badExportFilename("-csv", app.CSV); errCsv != nil {
-		log.Printf("%s", errCsv.Error())
-		return errCsv
+	if app.ExportMode != ExportASCII && app.ExportFile != "" {
+		if err := badExportFilename("--exportFile", app.ExportFile); err != nil {
+			log.Printf("%s", err.Error())
+			return err
+		}
 	}
 
 	app.ReportInterval = defaultTimeUnit(app.ReportInterval)
