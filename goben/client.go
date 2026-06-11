@@ -226,12 +226,14 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 
 	log.Printf("handleConnectionClient: starting %s %d/%d %v", protoLabel(isTLS), c, connections, conn.RemoteAddr())
 
+	// send options
 	if errOpt := sendOptions(app, conn); errOpt != nil {
 		return
 	}
 	opt := app.Opt
 	log.Printf("handleConnectionClient: options sent: %v", opt)
 
+	// receive ack
 	if !app.UDP {
 		var a ack
 		if errAck := ackRecv(app.UDP, conn, &a); errAck != nil {

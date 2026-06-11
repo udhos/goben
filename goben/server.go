@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -199,6 +200,11 @@ LOOP:
 func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, isTLS bool) {
 	defer wg.Done()
 
+	// Use a derived context so the closer goroutine exits when handleTCP returns,
+	// even if the parent context has not been cancelled yet.
+	ctx, stopCloser := context.WithCancel(ctx)
+	defer stopCloser()
+
 	go func() {
 		<-ctx.Done()
 		listener.Close()
@@ -209,6 +215,8 @@ func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, i
 	var aggReader aggregate
 	var aggWriter aggregate
 
+	var retryDelay time.Duration
+
 	for {
 		conn, errAccept := listener.Accept()
 		if errAccept != nil {
@@ -217,10 +225,25 @@ func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, i
 				log.Printf("handleTCP: shutdown requested")
 				return
 			default:
+			}
+			if errors.Is(errAccept, net.ErrClosed) {
+				return
+			}
+			// Retry transient errors with exponential backoff.
+			if retryDelay == 0 {
+				retryDelay = 5 * time.Millisecond
+			} else {
+				retryDelay *= 2
+			}
+			if retryDelay > time.Second {
 				log.Printf("handle: accept: %v", errAccept)
 				return
 			}
+			log.Printf("handle: accept temporary error, retrying in %v: %v", retryDelay, errAccept)
+			time.Sleep(retryDelay)
+			continue
 		}
+		retryDelay = 0
 		go handleConnection(ctx, conn, id, 0, isTLS, &aggReader, &aggWriter)
 		id++
 	}
@@ -236,6 +259,11 @@ type udpInfo struct {
 
 func handleUDP(ctx context.Context, app *Config, wg *sync.WaitGroup, conn *net.UDPConn) {
 	defer wg.Done()
+
+	// Use a derived context so the closer goroutine exits when handleUDP returns,
+	// even if the parent context has not been cancelled yet.
+	ctx, stopCloser := context.WithCancel(ctx)
+	defer stopCloser()
 
 	go func() {
 		<-ctx.Done()
@@ -294,7 +322,7 @@ func handleUDP(ctx context.Context, app *Config, wg *sync.WaitGroup, conn *net.U
 			log.Printf("handleUDP: options received: %v", info.opt)
 
 			if !info.opt.PassiveServer {
-				opt := info.opt
+				opt := info.opt // copy for goroutine
 				go serverWriterTo(ctx, conn, opt, src, info.acc, info.id, 0, &aggWriter)
 			}
 
@@ -320,10 +348,15 @@ func handleUDP(ctx context.Context, app *Config, wg *sync.WaitGroup, conn *net.U
 }
 
 func handleConnection(ctx context.Context, conn net.Conn, c, connections int, isTLS bool, aggReader, aggWriter *aggregate) {
-	defer conn.Close()
+	// Use sync.Once so conn.Close() is safe to call explicitly before returning
+	// (to unblock goroutines) as well as via defer for early-exit paths.
+	var closeOnce sync.Once
+	closeConn := func() { closeOnce.Do(func() { conn.Close() }) }
+	defer closeConn()
 
 	log.Printf("handleConnection: incoming: %s %v", protoLabel(isTLS), conn.RemoteAddr())
 
+	// ensure the TLS handshake if this is a TLS connection
 	tlscon, ok := conn.(*tls.Conn)
 	if ok {
 		err := tlscon.Handshake()
@@ -342,6 +375,7 @@ func handleConnection(ctx context.Context, conn net.Conn, c, connections int, is
 		log.Print("handleConnection: not TLS")
 	}
 
+	// receive options
 	var opt Options
 	dec := gob.NewDecoder(conn)
 	if errOpt := dec.Decode(&opt); errOpt != nil {
@@ -358,16 +392,27 @@ func handleConnection(ctx context.Context, conn net.Conn, c, connections int, is
 		log.Printf("handleConnection: clientVersion=%s", clientVersion)
 	}
 
+	// send ack
 	a := newAck()
 	if errAck := ackSend(false, conn, a); errAck != nil {
 		log.Printf("handleConnection: sending ack: %v", errAck)
 		return
 	}
 
-	go serverReader(ctx, conn, opt, c, connections, isTLS, aggReader)
+	var connWg sync.WaitGroup
+
+	connWg.Add(1)
+	go func() {
+		defer connWg.Done()
+		serverReader(ctx, conn, opt, c, connections, isTLS, aggReader)
+	}()
 
 	if !opt.PassiveServer {
-		go serverWriter(ctx, conn, opt, c, connections, isTLS, aggWriter)
+		connWg.Add(1)
+		go func() {
+			defer connWg.Done()
+			serverWriter(ctx, conn, opt, c, connections, isTLS, aggWriter)
+		}()
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
@@ -382,6 +427,8 @@ func handleConnection(ctx context.Context, conn net.Conn, c, connections int, is
 	tickerPeriod.Stop()
 
 	log.Printf("handleConnection: closing: %v", conn.RemoteAddr())
+	closeConn() // force reader/writer goroutines to unblock
+	connWg.Wait()
 }
 
 func serverReader(ctx context.Context, conn net.Conn, opt Options, c, connections int, isTLS bool, agg *aggregate) {

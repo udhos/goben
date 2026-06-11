@@ -149,6 +149,13 @@ func ValidateAndUpdateConfig(app *Config) error {
 	return nil
 }
 
+// ValidateAndUpdateServerConfig validates and updates the config.
+//
+// Deprecated: Use ValidateAndUpdateConfig instead, which supersedes this function.
+func ValidateAndUpdateServerConfig(app *Config) error {
+	return ValidateAndUpdateConfig(app)
+}
+
 // append "s" (second) to time string
 func defaultTimeUnit(s string) string {
 	if s == "" {
