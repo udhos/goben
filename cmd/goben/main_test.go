@@ -29,6 +29,18 @@ func TestInvalidConfig(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestValidateAndLogStartupParsesDurations(t *testing.T) {
+	app := goben.NewDefaultConfig()
+	app.ReportInterval = "1"
+	app.TotalDuration = "2"
+	app.Listeners = nil
+
+	assert.NoError(t, validateAndLogStartup(app))
+	assert.Equal(t, time.Second, app.Opt.ReportInterval)
+	assert.Equal(t, 2*time.Second, app.Opt.TotalDuration)
+	assert.Equal(t, goben.HostList{app.DefaultPort}, app.Listeners)
+}
+
 func TestEndToEndInvalidTLSConfig(t *testing.T) {
 
 	// a client config

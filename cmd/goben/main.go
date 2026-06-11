@@ -15,6 +15,18 @@ import (
 	"github.com/udhos/goben/goben"
 )
 
+func validateAndLogStartup(app *goben.Config) error {
+	if err := goben.ValidateAndUpdateConfig(app); err != nil {
+		return err
+	}
+
+	log.Print("goben version " + goben.Version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
+	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
+		app.Connections, app.DefaultPort, app.Listeners, app.Hosts)
+	log.Printf("reportInterval=%s totalDuration=%s", app.Opt.ReportInterval, app.Opt.TotalDuration)
+	return nil
+}
+
 func main() {
 
 	app := goben.Config{}
@@ -22,10 +34,9 @@ func main() {
 	app.AssignFlags(flag.CommandLine)
 	flag.Parse()
 
-	log.Print("goben version " + goben.Version + " runtime " + runtime.Version() + " GOMAXPROCS=" + strconv.Itoa(runtime.GOMAXPROCS(0)) + " OS=" + runtime.GOOS + " arch=" + runtime.GOARCH)
-	log.Printf("connections=%d defaultPort=%s listeners=%q hosts=%q",
-		app.Connections, app.DefaultPort, app.Listeners, app.Hosts)
-	log.Printf("reportInterval=%s totalDuration=%s", app.Opt.ReportInterval, app.Opt.TotalDuration)
+	if err := validateAndLogStartup(&app); err != nil {
+		log.Fatalf("bad config: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
