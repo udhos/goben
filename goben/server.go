@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -214,6 +215,8 @@ func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, i
 	var aggReader aggregate
 	var aggWriter aggregate
 
+	var retryDelay time.Duration
+
 	for {
 		conn, errAccept := listener.Accept()
 		if errAccept != nil {
@@ -222,15 +225,25 @@ func handleTCP(ctx context.Context, wg *sync.WaitGroup, listener net.Listener, i
 				log.Printf("handleTCP: shutdown requested")
 				return
 			default:
-				// Retry on transient errors; exit on permanent listener failure.
-				if ne, ok := errAccept.(net.Error); ok && ne.Temporary() { //nolint:staticcheck
-					log.Printf("handle: accept temporary error, retrying: %v", errAccept)
-					continue
-				}
+			}
+			if errors.Is(errAccept, net.ErrClosed) {
+				return
+			}
+			// Retry transient errors with exponential backoff.
+			if retryDelay == 0 {
+				retryDelay = 5 * time.Millisecond
+			} else {
+				retryDelay *= 2
+			}
+			if retryDelay > time.Second {
 				log.Printf("handle: accept: %v", errAccept)
 				return
 			}
+			log.Printf("handle: accept temporary error, retrying in %v: %v", retryDelay, errAccept)
+			time.Sleep(retryDelay)
+			continue
 		}
+		retryDelay = 0
 		go handleConnection(ctx, conn, id, 0, isTLS, &aggReader, &aggWriter)
 		id++
 	}
