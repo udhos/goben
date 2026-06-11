@@ -401,18 +401,14 @@ func handleConnection(ctx context.Context, conn net.Conn, c, connections int, is
 
 	var connWg sync.WaitGroup
 
-	connWg.Add(1)
-	go func() {
-		defer connWg.Done()
+	connWg.Go(func() {
 		serverReader(ctx, conn, opt, c, connections, isTLS, aggReader)
-	}()
+	})
 
 	if !opt.PassiveServer {
-		connWg.Add(1)
-		go func() {
-			defer connWg.Done()
+		connWg.Go(func() {
 			serverWriter(ctx, conn, opt, c, connections, isTLS, aggWriter)
-		}()
+		})
 	}
 
 	tickerPeriod := time.NewTimer(opt.TotalDuration)
