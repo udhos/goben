@@ -3,6 +3,7 @@ package goben
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -16,14 +17,67 @@ const Version = "1.1.0"
 // HostList holds a list of hosts to connect to or listen on.
 type HostList []string
 
-// Export modes
-const (
-	ExportNone  = 0
-	ExportASCII = 1
-	ExportCSV   = 2
-	ExportYAML  = 3
-	ExportPNG   = 4
+var (
+	reExportMode = regexp.MustCompile(`^(?i)(ascii|csv|yaml|png)$`)
+	reExportExt  = regexp.MustCompile(`(?i)\.(csv|yaml|yml|png|ascii)$`)
 )
+
+// ExportTarget holds an export mode and its output filename.
+type ExportTarget struct {
+	Mode     string
+	Filename string
+}
+
+func defaultExportFilename(mode string) string {
+	return fmt.Sprintf("result-%%d-%%s.%s", mode)
+}
+
+func parseExport(items []string) ([]ExportTarget, error) {
+	if len(items) == 0 {
+		return []ExportTarget{{Mode: "ascii", Filename: ""}}, nil
+	}
+
+	targets := make([]ExportTarget, 0, len(items))
+
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+
+		lower := strings.ToLower(item)
+
+		if reExportMode.MatchString(lower) {
+			mode := lower
+			targets = append(targets, ExportTarget{
+				Mode:     mode,
+				Filename: defaultExportFilename(mode),
+			})
+			continue
+		}
+
+		extMatch := reExportExt.FindStringSubmatch(lower)
+		if extMatch != nil {
+			ext := strings.TrimPrefix(extMatch[0], ".")
+			mode := ext
+			if mode == "yml" {
+				mode = "yaml"
+			}
+			targets = append(targets, ExportTarget{
+				Mode:     mode,
+				Filename: item,
+			})
+			continue
+		}
+
+		return nil, fmt.Errorf("unrecognized export item: %q (expected ascii, csv, yaml, png, or a filename ending in .csv, .yaml, .yml, .png, .ascii)", item)
+	}
+
+	if len(targets) == 0 {
+		return nil, nil
+	}
+	return targets, nil
+}
 
 // Config holds the configuration for the client and server.
 type Config struct {
@@ -36,8 +90,8 @@ type Config struct {
 	Opt            Options
 	PassiveClient  bool
 	UDP            bool
-	ExportMode     int
-	ExportFile     string
+	Export         []string
+	exports        []ExportTarget
 	TLSCert        string
 	TLSKey         string
 	TLSCA          string
@@ -64,8 +118,7 @@ func (app *Config) AssignFlags(flagset *pflag.FlagSet) {
 	flagset.BoolVar(&app.Opt.PassiveServer, "passiveServer", false, "suppress server traffic (receive only)")
 	flagset.Float64VarP(&app.Opt.MaxSpeed, "maxSpeed", "m", 0, "bandwidth limit in Mbps (0 means unlimited)")
 	flagset.BoolVarP(&app.UDP, "udp", "u", false, "use UDP protocol instead of TCP")
-	flagset.IntVarP(&app.ExportMode, "export", "e", ExportNone, "export mode: 0=none, 1=ASCII, 2=CSV, 3=YAML, 4=PNG")
-	flagset.StringVar(&app.ExportFile, "exportFile", "", "output filename for CSV/YAML/PNG export (supports %d=connIndex, %s=host)")
+	flagset.StringSliceVarP(&app.Export, "export", "e", nil, "export mode: comma-separated or repeated flags of ascii, csv, yaml, png, or filenames with recognized extensions\nexample: --export ascii,csv,result-%d-%s.yaml or -e my.yaml -e my.png")
 	flagset.StringVar(&app.TLSKey, "key", "key.pem", "TLS private key file (PEM format)")
 	flagset.StringVar(&app.TLSCert, "cert", "cert.pem", "TLS certificate file (PEM format)")
 	flagset.StringVar(&app.TLSCA, "ca", "ca.pem", "TLS CA certificate file for peer verification (PEM format)")
@@ -121,17 +174,19 @@ func badExportFilename(parameter, filename string) error {
 // ValidateAndUpdateConfig validates and updates the config
 // it will set internal values necessary for successful completion
 func ValidateAndUpdateConfig(app *Config) error {
-	if app.ExportMode < ExportNone || app.ExportMode > ExportPNG {
-		return fmt.Errorf("invalid export mode %d: must be %d (none), %d (ASCII), %d (CSV), %d (YAML), or %d (PNG)",
-			app.ExportMode, ExportNone, ExportASCII, ExportCSV, ExportYAML, ExportPNG)
+	targets, errParse := parseExport(app.Export)
+	if errParse != nil {
+		return fmt.Errorf("invalid --export value: %w", errParse)
 	}
-
-	if app.ExportMode != ExportASCII && app.ExportFile != "" {
-		if err := badExportFilename("--exportFile", app.ExportFile); err != nil {
-			log.Printf("%s", err.Error())
-			return err
+	for _, t := range targets {
+		if strings.Contains(t.Filename, "%") {
+			if err := badExportFilename("--export", t.Filename); err != nil {
+				log.Printf("%s", err.Error())
+				return err
+			}
 		}
 	}
+	app.exports = targets
 
 	app.ReportInterval = defaultTimeUnit(app.ReportInterval)
 	app.TotalDuration = defaultTimeUnit(app.TotalDuration)

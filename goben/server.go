@@ -92,7 +92,7 @@ func listenTCP(ctx context.Context, app *Config, wg *sync.WaitGroup, h string) b
 		if app.TLS {
 			log.Printf("listenTCP: falling back to TCP and spawning TCP listener: %s", h)
 		} else {
-			log.Printf("listenTCP: spawning TLS listener: %s", h)
+			log.Printf("listenTCP: spawning TCP listener: %s", h)
 		}
 		listener, errListen := net.Listen("tcp", h)
 		if errListen != nil {

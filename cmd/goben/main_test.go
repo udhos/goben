@@ -37,8 +37,7 @@ func TestEndToEndInvalidTLSConfig(t *testing.T) {
 	client.TLS = true
 	client.TCP = false
 	client.UDP = false
-	client.ExportMode = goben.ExportYAML
-	client.ExportFile = "export-%d-%s.yaml"
+	client.Export = []string{"export-%d-%s.yaml"}
 	client.ReportInterval = "1s"
 	client.TotalDuration = "2s"
 	client.Connections = 1
