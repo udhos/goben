@@ -149,16 +149,6 @@ func ValidateAndUpdateConfig(app *Config) error {
 	return nil
 }
 
-// ValidateAndUpdateServerConfig validates and updates the config.
-// It will set internal values necessary for successful completion.
-func ValidateAndUpdateServerConfig(app *Config) error {
-	if len(app.Listeners) == 0 {
-		app.Listeners = []string{app.DefaultPort}
-	}
-
-	return nil
-}
-
 // append "s" (second) to time string
 func defaultTimeUnit(s string) string {
 	if s == "" {
