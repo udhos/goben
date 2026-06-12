@@ -18,6 +18,7 @@ goben is a golang tool to measure TCP/UDP transport layer throughput between hos
 - [Command-line Options](#command-line-options)
 - [Example](#example)
 - [TLS](#tls)
+- [Export](#export)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
@@ -78,9 +79,9 @@ Usage of goben:
       --ca string               TLS CA certificate file for peer verification (PEM format) (default "ca.pem")
       --cert string             TLS certificate file (PEM format) (default "cert.pem")
   -c, --connections int         number of parallel connections to each host (default 1)
-  -p, --defaultPort int         default port, automatically appended to hosts without explicit port (default 8080)
-  -e, --export int              export mode: 1=ASCII (default), 2=CSV, 3=YAML, 4=PNG (default 1)
-      --exportFile string       output filename for CSV/YAML/PNG export (supports %d=connIndex, %s=host)
+  -p, --defaultPort string      default port, automatically appended to hosts without explicit port (default ":8080")
+  -e, --export strings          export mode: comma-separated or repeated flags of ascii, csv, yaml, png, or filenames
+                                example: --export ascii,csv,result-%d-%s.yaml or -e my.yaml -e my.png
   -H, --hosts strings           comma-separated list of target hosts for client mode
                                 format: host[:port] (port defaults to --defaultPort)
       --key string              TLS private key file (PEM format) (default "key.pem")
@@ -111,81 +112,80 @@ Usage of goben:
 Server side:
 
     $ goben
-    2026/06/10 01:49:33 goben version 1.0.3 runtime go1.26.2 GOMAXPROCS=16 OS=linux arch=amd64
-    2026/06/10 01:49:33 connections=1 defaultPort=8080 listeners=[] hosts=[]
-    2026/06/10 01:49:33 reportInterval=0s totalDuration=0s
-    2026/06/10 01:49:33 server mode (use --hosts to switch to client mode)
-    2026/06/10 01:49:33 listenTCP: TLS disabled
-    2026/06/10 01:49:33 listenTCP: spawning TLS listener: :8080
-    2026/06/10 01:49:33 listenUDP: UDP disabled
+    2026/06/12 00:36:38 goben version 1.1.0 runtime go1.26.4 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/12 00:36:38 connections=1 defaultPort=:8080 listeners=[] hosts=[]
+    2026/06/12 00:36:38 reportInterval=0s totalDuration=0s
+    2026/06/12 00:36:38 server mode (use -hosts to switch to client mode)
+    2026/06/12 00:36:38 listenTCP: TLS disabled
+    2026/06/12 00:36:38 listenTCP: spawning TLS listener: :8080
+    2026/06/12 00:36:38 listenUDP: UDP disabled
 
 Client side:
 
     $ goben -H 127.0.0.1
-    2026/06/10 01:49:34 goben version 1.0.3 runtime go1.26.2 GOMAXPROCS=16 OS=linux arch=amd64
-    2026/06/10 01:49:34 connections=1 defaultPort=8080 listeners=[] hosts=["127.0.0.1"]
-    2026/06/10 01:49:34 reportInterval=0s totalDuration=0s
-    2026/06/10 01:49:34 client mode, tcp protocol
-    2026/06/10 01:49:34 open: opening TLS=false tcp 0/1: 127.0.0.1:8080
-    2026/06/10 01:49:34 open: trying non-TLS TCP
-    2026/06/10 01:49:34 handleConnectionClient: starting TCP 0/1 127.0.0.1:8080
-    2026/06/10 01:49:34 handleConnectionClient: options sent: {1s 2s 1000000 1000000 64000 64000 false 0 map[]}
-    2026/06/10 01:49:34 serverVersion=1.0.3
-    2026/06/10 01:49:34 handleConnectionClient: TCP ack received
-    2026/06/10 01:49:34 clientWriter: starting: 0/1 127.0.0.1:8080
-    2026/06/10 01:49:34 clientReader: starting: 0/1 127.0.0.1:8080
-    2026/06/10 01:49:35 0/1  report   clientReader rate: 21994.914328 Mbps   3732 rcv/s
-    2026/06/10 01:49:35 0/1  report   clientWriter rate: 21881.352904 Mbps   2735 snd/s
-    2026/06/10 01:49:36 handleConnectionClient: 2s timer
-    2018/06/28 15:04:28 open: opening tcp 0/1: localhost:8080
-    2018/06/28 15:04:28 handleConnectionClient: starting 0/1 [::1]:8080
-    2018/06/28 15:04:28 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}
-    2018/06/28 15:04:28 clientReader: starting: 0/1 [::1]:8080
-    2018/06/28 15:04:28 clientWriter: starting: 0/1 [::1]:8080
-    2018/06/28 15:04:30 0/1  report   clientReader rate:  13917 Mbps  34793 rcv/s
-    2018/06/28 15:04:30 0/1  report   clientWriter rate:  13468 Mbps  33670 snd/s
-    2018/06/28 15:04:32 0/1  report   clientReader rate:  14044 Mbps  35111 rcv/s
-    2018/06/28 15:04:32 0/1  report   clientWriter rate:  13591 Mbps  33978 snd/s
-    2018/06/28 15:04:34 0/1  report   clientReader rate:  12934 Mbps  32337 rcv/s
-    2018/06/28 15:04:34 0/1  report   clientWriter rate:  12517 Mbps  31294 snd/s
-    2018/06/28 15:04:36 0/1  report   clientReader rate:  13307 Mbps  33269 rcv/s
-    2018/06/28 15:04:36 0/1  report   clientWriter rate:  12878 Mbps  32196 snd/s
-    2018/06/28 15:04:38 0/1  report   clientWriter rate:  13330 Mbps  33325 snd/s
-    2018/06/28 15:04:38 0/1  report   clientReader rate:  13774 Mbps  34436 rcv/s
-    2018/06/28 15:04:38 handleConnectionClient: 10s timer
-    2018/06/28 15:04:38 workLoop: 0/1 clientWriter: write tcp [::1]:42130->[::1]:8080: use of closed network connection
-    2018/06/28 15:04:38 0/1 average   clientWriter rate:  13157 Mbps  32892 snd/s
-    2018/06/28 15:04:38 clientWriter: exiting: 0/1 [::1]:8080
-    2018/06/28 15:04:38 workLoop: 0/1 clientReader: read tcp [::1]:42130->[::1]:8080: use of closed network connection
-    2018/06/28 15:04:38 0/1 average   clientReader rate:  13595 Mbps  33989 rcv/s
-    2018/06/28 15:04:38 clientReader: exiting: 0/1 [::1]:8080
-    2018/06/28 15:04:38 input:
-     14038 ┤          ╭────╮
-     13939 ┤──────────╯    ╰╮
-     13840 ┼                ╰─╮
-     13741 ┤                  ╰╮                                    ╭──
-     13641 ┤                   ╰╮                               ╭───╯
-     13542 ┤                    ╰─╮                          ╭──╯
-     13443 ┤                      ╰╮                     ╭───╯
-     13344 ┤                       ╰─╮               ╭───╯
-     13245 ┤                         ╰╮          ╭───╯
-     13146 ┤                          ╰─╮    ╭───╯
-     13047 ┤                            ╰────╯
-     12948 ┤
-    2018/06/28 15:04:38 output:
-     13585 ┤          ╭────╮
-     13489 ┤──────────╯    ╰╮
-     13393 ┼                ╰─╮
-     13297 ┤                  ╰╮                                    ╭──
-     13201 ┤                   ╰╮                               ╭───╯
-     13105 ┤                    ╰─╮                          ╭──╯
-     13009 ┤                      ╰╮                     ╭───╯
-     12914 ┤                       ╰─╮               ╭───╯
-     12818 ┤                         ╰╮          ╭───╯
-     12722 ┤                          ╰─╮    ╭───╯
-     12626 ┤                            ╰────╯
-     12530 ┤
-    2018/06/28 15:04:38 handleConnectionClient: closing: 0/1 [::1]:8080
+    2026/06/12 00:36:39 goben version 1.1.0 runtime go1.26.4 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/12 00:36:39 connections=1 defaultPort=:8080 listeners=[] hosts=["127.0.0.1"]
+    2026/06/12 00:36:39 reportInterval=0s totalDuration=0s
+    2026/06/12 00:36:39 client mode, tcp protocol
+    2026/06/12 00:36:39 open: opening TLS=false tcp 0/1: 127.0.0.1:8080
+    2026/06/12 00:36:39 open: trying non-TLS TCP
+    2026/06/12 00:36:39 handleConnectionClient: starting TCP 0/1 127.0.0.1:8080
+    2026/06/12 00:36:39 handleConnectionClient: options sent: {1s 2s 1000000 1000000 64000 64000 false 0 map[]}
+    2026/06/12 00:36:39 serverVersion=1.1.0
+    2026/06/12 00:36:39 handleConnectionClient: TCP ack received
+    2026/06/12 00:36:39 clientWriter: starting: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:39 clientReader: starting: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:40 0/1  report   clientReader rate: 21467.668538 Mbps   3503 rcv/s
+    2026/06/12 00:36:40 0/1  report   clientWriter rate: 21837.537818 Mbps   2729 snd/s
+    2026/06/12 00:36:41 handleConnectionClient: 2s timer
+    2026/06/12 00:36:41 127.0.0.1:8080 input:
+     21468 ┼─────────────────────────╮
+     19321 ┤                         ╰───────────╮
+     17174 ┤                                     ╰───╮
+     15027 ┤                                         ╰──╮
+     12881 ┤                                            ╰───╮
+     10734 ┤                                                ╰───╮
+      8587 ┤                                                    ╰───╮
+      6440 ┤                                                        ╰──╮
+      4294 ┤                                                           ╰───╮
+      2147 ┤                                                               ╰───╮
+         0 ┤                                                                   ╰─
+                       Input Mbps: 127.0.0.1:8080 Connection 0
+    2026/06/12 00:36:41 127.0.0.1:8080 output:
+     21838 ┼──────╮
+     21704 ┤      ╰──────╮
+     21570 ┤             ╰──────╮
+     21437 ┤                    ╰──────╮
+     21303 ┤                           ╰──────╮
+     21170 ┤                                  ╰──────╮
+     21036 ┤                                         ╰──────╮
+     20903 ┤                                                ╰──────╮
+     20769 ┤                                                       ╰──────╮
+     20635 ┤                                                              ╰─────╮
+     20502 ┤                                                                    ╰
+                       Output Mbps: 127.0.0.1:8080 Connection 0
+    2026/06/12 00:36:41 handleConnectionClient: closing: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:41 aggregate reading: 20748.578718 Mbps 3006 recv/s
+    2026/06/12 00:36:41 aggregate writing: 21170.406833 Mbps 2646 send/s
+
+# Export
+
+Use `-e` / `--export` to save test results in one or more formats. Supported formats: `ascii`, `csv`, `yaml`, `png`.
+
+Multiple formats can be combined with commas or repeated flags:
+
+    # export CSV and YAML with auto-generated filenames
+    goben -H 1.1.1.1 -e csv,yaml
+
+    # export to specific filenames (extension determines format)
+    goben -H 1.1.1.1 -e result.csv -e report.yaml
+
+    # short form with multiple flags
+    goben -H 1.1.1.1 -e ascii -e png
+
+Without `--export`, ASCII charts are printed to the console only. Passing `--export ascii` also writes the chart to a file.
+
+Auto-generated filenames use the pattern `result-<connIndex>-<host>.<ext>` (e.g. `result-0-127.0.0.1.csv`).
 
 # TLS
 
