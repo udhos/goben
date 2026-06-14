@@ -254,7 +254,7 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 	var input *ChartData
 	var output *ChartData
 
-	if app.CSV != "" || app.Export != "" || app.Chart != "" || app.ASCII {
+	if len(app.exports) > 0 {
 		input = &info.Input
 		output = &info.Output
 	}
@@ -277,6 +277,7 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 
 	tickerPeriod.Stop()
 
+	remoteAddr := formatAddress(conn)
 	conn.Close()
 
 	<-doneReader
@@ -284,39 +285,49 @@ func handleConnectionClient(ctx context.Context, app *Config, wg *sync.WaitGroup
 		<-doneWriter
 	}
 
-	if app.CSV != "" {
-
-		filename := fmt.Sprintf(app.CSV, c, formatAddress(conn))
-		log.Printf("exporting CSV test results to: %s", filename)
-		errExport := exportCsv(filename, &info)
-		if errExport != nil {
-			log.Printf("handleConnectionClient: export CSV: %s: %v", filename, errExport)
+	for _, t := range app.exports {
+		var filename string
+		if t.Filename != "" {
+			if strings.Contains(t.Filename, "%") {
+				filename = fmt.Sprintf(t.Filename, c, remoteAddr)
+			} else {
+				filename = t.Filename
+			}
+		}
+		switch t.Mode {
+		case "ascii":
+			if filename != "" {
+				log.Printf("exporting ASCII test results to: %s", filename)
+			}
+			plotasciiToFile(filename, &info, remoteAddr, c)
+		case "csv":
+			if filename == "" {
+				continue
+			}
+			log.Printf("exporting CSV test results to: %s", filename)
+			if errExport := exportCsv(filename, &info); errExport != nil {
+				log.Printf("handleConnectionClient: export CSV: %s: %v", filename, errExport)
+			}
+		case "yaml":
+			if filename == "" {
+				continue
+			}
+			log.Printf("exporting YAML test results to: %s", filename)
+			if errExport := export(filename, &info); errExport != nil {
+				log.Printf("handleConnectionClient: export YAML: %s: %v", filename, errExport)
+			}
+		case "png":
+			if filename == "" {
+				continue
+			}
+			log.Printf("rendering chart to: %s", filename)
+			if errRender := chartRender(filename, &info.Input, &info.Output); errRender != nil {
+				log.Printf("handleConnectionClient: render PNG: %s: %v", filename, errRender)
+			}
 		}
 	}
 
-	if app.Export != "" {
-		filename := fmt.Sprintf(app.Export, c, formatAddress(conn))
-		log.Printf("exporting YAML test results to: %s", filename)
-		errExport := export(filename, &info)
-		if errExport != nil {
-			log.Printf("handleConnectionClient: export YAML: %s: %v", filename, errExport)
-		}
-	}
-
-	if app.Chart != "" {
-		filename := fmt.Sprintf(app.Chart, c, formatAddress(conn))
-		log.Printf("rendering chart to: %s", filename)
-		errRender := chartRender(filename, &info.Input, &info.Output)
-		if errRender != nil {
-			log.Printf("handleConnectionClient: render PNG: %s: %v", filename, errRender)
-		}
-	}
-
-	if app.ASCII {
-		plotascii(&info, conn.RemoteAddr().String(), c)
-	}
-
-	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, conn.RemoteAddr())
+	log.Printf("handleConnectionClient: closing: %d/%d %v", c, connections, remoteAddr)
 }
 
 func getBufSize(opt Options, isUDP bool) (bufSizeIn int, bufSizeOut int) {

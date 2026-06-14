@@ -18,6 +18,7 @@ goben is a golang tool to measure TCP/UDP transport layer throughput between hos
 - [Command-line Options](#command-line-options)
 - [Example](#example)
 - [TLS](#tls)
+- [Export](#export)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
 
@@ -66,7 +67,7 @@ Start server:
 
 Start client:
 
-    client$ goben -hosts 1.1.1.1 ;# 1.1.1.1 is server's address
+    client$ goben -H 1.1.1.1 ;# 1.1.1.1 is server's address
 
 # Command-line Options
 
@@ -74,74 +75,36 @@ Find several supported command-line switches by running 'goben -h':
 
 ```
 $ goben -h
-2021/02/28 00:43:28 goben version 0.6 runtime go1.16 GOMAXPROCS=12 OS=linux arch=amd64
 Usage of goben:
-  -ascii
-        plot ascii chart (default true)
-  -ca string
-        TLS CA file (if server: CA to validate the client cert, if client: CA to validate the server cert) (default "ca.pem")
-  -cert string
-        TLS cert file (default "cert.pem")
-  -chart string
-        output filename for rendering chart on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -chart chart-%d-%s.png
-  -connections int
-        number of parallel connections (default 1)
-  -csv string
-        output filename for CSV exporting test results on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -csv export-%d-%s.csv
-  -defaultPort string
-        default port (default ":8080")
-  -export string
-        output filename for YAML exporting test results on client
-        '%d' is parallel connection index to host
-        '%s' is hostname:port
-        example: -export export-%d-%s.yaml
-  -hosts value
-        comma-separated list of hosts
-        you may append an optional port to every host: host[:port]
-  -key string
-        TLS key file (default "key.pem")
-  -listeners value
-        comma-separated list of listen addresses
-        you may prepend an optional host to every port: [host]:port
-  -localAddr string
-        bind specific local address:port
-        example: -localAddr 127.0.0.1:2000
-  -maxSpeed float
-        bandwidth limit in mbps (0 means unlimited)
-  -passiveClient
-        suppress client writes
-  -passiveServer
-        suppress server writes
-  -reportInterval string
-        periodic report interval
-        unspecified time unit defaults to second (default "2s")
-  -tcp
-        set to false to disable TCP (this can be used to test TLS only or UDP only) (default true)
-  -tcpReadSize int
-        TCP read buffer size in bytes (default 1000000)
-  -tcpWriteSize int
-        TCP write buffer size in bytes (default 1000000)
-  -tls
-        set to false to disable TLS (default true)
-  -tlsAuthClient
-        set to true to enable client certificate authentication (check against CA) (default true)
-  -tlsAuthServer
-        set to true to enable server certificate authentication (check against CA) (default true)
-  -totalDuration string
-        test total duration
-        unspecified time unit defaults to second (default "10s")
-  -udp
-        run client in UDP mode
-  -udpReadSize int
-        UDP read buffer size in bytes (default 64000)
-  -udpWriteSize int
-        UDP write buffer size in bytes (default 64000)
+      --ca string               TLS CA certificate file for peer verification (PEM format) (default "ca.pem")
+      --cert string             TLS certificate file (PEM format) (default "cert.pem")
+  -c, --connections int         number of parallel connections to each host (default 1)
+  -p, --defaultPort string      default port, automatically appended to hosts without explicit port (default ":8080")
+  -e, --export strings          export mode: comma-separated or repeated flags of ascii, csv, yaml, png, or filenames
+                                example: --export ascii,csv,result-%d-%s.yaml or -e my.yaml -e my.png
+  -H, --hosts strings           comma-separated list of target hosts for client mode
+                                format: host[:port] (port defaults to --defaultPort)
+      --key string              TLS private key file (PEM format) (default "key.pem")
+  -l, --listeners strings       comma-separated list of listen addresses for server mode
+                                format: [host]:port
+  -a, --localAddr string        bind specific local address:port
+                                example: --localAddr 127.0.0.1:2000
+  -m, --maxSpeed float          bandwidth limit in Mbps (0 means unlimited)
+      --passiveClient           suppress client traffic (receive only)
+      --passiveServer           suppress server traffic (receive only)
+  -i, --reportInterval string   periodic throughput report interval
+                                unspecified time unit defaults to second (default "2s")
+  -t, --tcp                     enable TCP transport (disable to test TLS-only or UDP-only) (default true)
+      --tcpReadSize int         TCP read buffer size in bytes (default 1000000)
+      --tcpWriteSize int        TCP write buffer size in bytes (default 1000000)
+  -s, --tls                     enable TLS encryption (default true)
+      --tlsAuthClient           enable mutual TLS: verify server certificate against CA (default true)
+      --tlsAuthServer           enable mutual TLS: verify client certificate against CA (default true)
+  -d, --totalDuration string    total test duration
+                                unspecified time unit defaults to second (default "10s")
+  -u, --udp                     use UDP protocol instead of TCP
+      --udpReadSize int         UDP read buffer size in bytes (default 64000)
+      --udpWriteSize int        UDP write buffer size in bytes (default 64000)
 ```
 
 # Example
@@ -149,69 +112,80 @@ Usage of goben:
 Server side:
 
     $ goben
-    2018/06/28 15:04:26 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
-    2018/06/28 15:04:26 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=[]
-    2018/06/28 15:04:26 reportInterval=2s totalDuration=10s
-    2018/06/28 15:04:26 server mode (use -hosts to switch to client mode)
-    2018/06/28 15:04:26 serve: spawning TCP listener: :8080
-    2018/06/28 15:04:26 serve: spawning UDP listener: :8080
+    2026/06/12 00:36:38 goben version 1.1.0 runtime go1.26.4 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/12 00:36:38 connections=1 defaultPort=:8080 listeners=[] hosts=[]
+    2026/06/12 00:36:38 reportInterval=0s totalDuration=0s
+    2026/06/12 00:36:38 server mode (use -hosts to switch to client mode)
+    2026/06/12 00:36:38 listenTCP: TLS disabled
+    2026/06/12 00:36:38 listenTCP: spawning TLS listener: :8080
+    2026/06/12 00:36:38 listenUDP: UDP disabled
 
 Client side:
 
-    $ goben -hosts localhost
-    2018/06/28 15:04:28 goben version 0.3 runtime go1.11beta1 GOMAXPROCS=1
-    2018/06/28 15:04:28 connections=1 defaultPort=:8080 listeners=[":8080"] hosts=["localhost"]
-    2018/06/28 15:04:28 reportInterval=2s totalDuration=10s
-    2018/06/28 15:04:28 client mode, tcp protocol
-    2018/06/28 15:04:28 open: opening tcp 0/1: localhost:8080
-    2018/06/28 15:04:28 handleConnectionClient: starting 0/1 [::1]:8080
-    2018/06/28 15:04:28 handleConnectionClient: options sent: {2s 10s 50000 50000 false 0}
-    2018/06/28 15:04:28 clientReader: starting: 0/1 [::1]:8080
-    2018/06/28 15:04:28 clientWriter: starting: 0/1 [::1]:8080
-    2018/06/28 15:04:30 0/1  report   clientReader rate:  13917 Mbps  34793 rcv/s
-    2018/06/28 15:04:30 0/1  report   clientWriter rate:  13468 Mbps  33670 snd/s
-    2018/06/28 15:04:32 0/1  report   clientReader rate:  14044 Mbps  35111 rcv/s
-    2018/06/28 15:04:32 0/1  report   clientWriter rate:  13591 Mbps  33978 snd/s
-    2018/06/28 15:04:34 0/1  report   clientReader rate:  12934 Mbps  32337 rcv/s
-    2018/06/28 15:04:34 0/1  report   clientWriter rate:  12517 Mbps  31294 snd/s
-    2018/06/28 15:04:36 0/1  report   clientReader rate:  13307 Mbps  33269 rcv/s
-    2018/06/28 15:04:36 0/1  report   clientWriter rate:  12878 Mbps  32196 snd/s
-    2018/06/28 15:04:38 0/1  report   clientWriter rate:  13330 Mbps  33325 snd/s
-    2018/06/28 15:04:38 0/1  report   clientReader rate:  13774 Mbps  34436 rcv/s
-    2018/06/28 15:04:38 handleConnectionClient: 10s timer
-    2018/06/28 15:04:38 workLoop: 0/1 clientWriter: write tcp [::1]:42130->[::1]:8080: use of closed network connection
-    2018/06/28 15:04:38 0/1 average   clientWriter rate:  13157 Mbps  32892 snd/s
-    2018/06/28 15:04:38 clientWriter: exiting: 0/1 [::1]:8080
-    2018/06/28 15:04:38 workLoop: 0/1 clientReader: read tcp [::1]:42130->[::1]:8080: use of closed network connection
-    2018/06/28 15:04:38 0/1 average   clientReader rate:  13595 Mbps  33989 rcv/s
-    2018/06/28 15:04:38 clientReader: exiting: 0/1 [::1]:8080
-    2018/06/28 15:04:38 input:
-     14038 ┤          ╭────╮
-     13939 ┤──────────╯    ╰╮
-     13840 ┼                ╰─╮
-     13741 ┤                  ╰╮                                    ╭──
-     13641 ┤                   ╰╮                               ╭───╯
-     13542 ┤                    ╰─╮                          ╭──╯
-     13443 ┤                      ╰╮                     ╭───╯
-     13344 ┤                       ╰─╮               ╭───╯
-     13245 ┤                         ╰╮          ╭───╯
-     13146 ┤                          ╰─╮    ╭───╯
-     13047 ┤                            ╰────╯
-     12948 ┤
-    2018/06/28 15:04:38 output:
-     13585 ┤          ╭────╮
-     13489 ┤──────────╯    ╰╮
-     13393 ┼                ╰─╮
-     13297 ┤                  ╰╮                                    ╭──
-     13201 ┤                   ╰╮                               ╭───╯
-     13105 ┤                    ╰─╮                          ╭──╯
-     13009 ┤                      ╰╮                     ╭───╯
-     12914 ┤                       ╰─╮               ╭───╯
-     12818 ┤                         ╰╮          ╭───╯
-     12722 ┤                          ╰─╮    ╭───╯
-     12626 ┤                            ╰────╯
-     12530 ┤
-    2018/06/28 15:04:38 handleConnectionClient: closing: 0/1 [::1]:8080
+    $ goben -H 127.0.0.1
+    2026/06/12 00:36:39 goben version 1.1.0 runtime go1.26.4 GOMAXPROCS=16 OS=linux arch=amd64
+    2026/06/12 00:36:39 connections=1 defaultPort=:8080 listeners=[] hosts=["127.0.0.1"]
+    2026/06/12 00:36:39 reportInterval=0s totalDuration=0s
+    2026/06/12 00:36:39 client mode, tcp protocol
+    2026/06/12 00:36:39 open: opening TLS=false tcp 0/1: 127.0.0.1:8080
+    2026/06/12 00:36:39 open: trying non-TLS TCP
+    2026/06/12 00:36:39 handleConnectionClient: starting TCP 0/1 127.0.0.1:8080
+    2026/06/12 00:36:39 handleConnectionClient: options sent: {1s 2s 1000000 1000000 64000 64000 false 0 map[]}
+    2026/06/12 00:36:39 serverVersion=1.1.0
+    2026/06/12 00:36:39 handleConnectionClient: TCP ack received
+    2026/06/12 00:36:39 clientWriter: starting: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:39 clientReader: starting: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:40 0/1  report   clientReader rate: 21467.668538 Mbps   3503 rcv/s
+    2026/06/12 00:36:40 0/1  report   clientWriter rate: 21837.537818 Mbps   2729 snd/s
+    2026/06/12 00:36:41 handleConnectionClient: 2s timer
+    2026/06/12 00:36:41 127.0.0.1:8080 input:
+     21468 ┼─────────────────────────╮
+     19321 ┤                         ╰───────────╮
+     17174 ┤                                     ╰───╮
+     15027 ┤                                         ╰──╮
+     12881 ┤                                            ╰───╮
+     10734 ┤                                                ╰───╮
+      8587 ┤                                                    ╰───╮
+      6440 ┤                                                        ╰──╮
+      4294 ┤                                                           ╰───╮
+      2147 ┤                                                               ╰───╮
+         0 ┤                                                                   ╰─
+                       Input Mbps: 127.0.0.1:8080 Connection 0
+    2026/06/12 00:36:41 127.0.0.1:8080 output:
+     21838 ┼──────╮
+     21704 ┤      ╰──────╮
+     21570 ┤             ╰──────╮
+     21437 ┤                    ╰──────╮
+     21303 ┤                           ╰──────╮
+     21170 ┤                                  ╰──────╮
+     21036 ┤                                         ╰──────╮
+     20903 ┤                                                ╰──────╮
+     20769 ┤                                                       ╰──────╮
+     20635 ┤                                                              ╰─────╮
+     20502 ┤                                                                    ╰
+                       Output Mbps: 127.0.0.1:8080 Connection 0
+    2026/06/12 00:36:41 handleConnectionClient: closing: 0/1 127.0.0.1:8080
+    2026/06/12 00:36:41 aggregate reading: 20748.578718 Mbps 3006 recv/s
+    2026/06/12 00:36:41 aggregate writing: 21170.406833 Mbps 2646 send/s
+
+# Export
+
+Use `-e` / `--export` to save test results in one or more formats. Supported formats: `ascii`, `csv`, `yaml`, `png`.
+
+Multiple formats can be combined with commas or repeated flags:
+
+    # export CSV and YAML with auto-generated filenames
+    goben -H 1.1.1.1 -e csv,yaml
+
+    # export to specific filenames (extension determines format)
+    goben -H 1.1.1.1 -e result.csv -e report.yaml
+
+    # short form with multiple flags
+    goben -H 1.1.1.1 -e ascii -e png
+
+Without `--export`, ASCII charts are printed to the console only. Passing `--export ascii` also writes the chart to a file.
+
+Auto-generated filenames use the pattern `result-<connIndex>-<host>.<ext>` (e.g. `result-0-127.0.0.1.csv`).
 
 # TLS
 

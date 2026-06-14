@@ -2,6 +2,7 @@ module github.com/udhos/goben
 
 require (
 	github.com/guptarohit/asciigraph v0.9.0
+	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.9.0
 	github.com/wcharczuk/go-chart v2.0.1+incompatible
 	gopkg.in/yaml.v3 v3.0.1
